@@ -59,37 +59,53 @@ def train():
 
     logger.info(f'Class distribution: {y.value_counts().to_dict()}')
 
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=42, stratify=y
+    # Train / Validation / Test split — 70 / 15 / 15
+    X_train_val, X_test, y_train_val, y_test = train_test_split(
+        X, y, test_size=0.15, random_state=42, stratify=y
     )
+    X_train, X_val, y_train, y_val = train_test_split(
+        X_train_val, y_train_val, test_size=0.176, random_state=42, stratify=y_train_val
+        # 0.176 of 85% ≈ 15% of total → final split: 70/15/15
+    )
+
+    logger.info(f'Split sizes — Train: {len(X_train):,} | Val: {len(X_val):,} | Test: {len(X_test):,}')
 
     scale_pos_weight = (y_train == 0).sum() / max((y_train == 1).sum(), 1)
     logger.info(f'scale_pos_weight: {scale_pos_weight:.2f}')
 
     model = xgb.XGBClassifier(
-        n_estimators=300,
-        max_depth=5,
+        n_estimators=500,
+        max_depth=4,
         learning_rate=0.05,
         subsample=0.8,
         colsample_bytree=0.8,
         scale_pos_weight=scale_pos_weight,
         eval_metric='auc',
+        early_stopping_rounds=30,
         random_state=42,
         verbosity=0,
     )
 
+    # Train with early stopping on validation set
     model.fit(
         X_train, y_train,
-        eval_set=[(X_test, y_test)],
+        eval_set=[(X_val, y_val), (X_test, y_test)],
         verbose=50,
     )
 
+    # Validation set metrics
+    y_val_proba = model.predict_proba(X_val)[:, 1]
+    val_auc     = roc_auc_score(y_val, y_val_proba)
+    logger.info(f'VALIDATION AUC: {val_auc:.4f}')
+
+    # Test set metrics (final, unseen)
     y_pred_proba = model.predict_proba(X_test)[:, 1]
     y_pred       = (y_pred_proba >= 0.5).astype(int)
     auc          = roc_auc_score(y_test, y_pred_proba)
 
     logger.info('=' * 50)
-    logger.info(f'TEST AUC: {auc:.4f}')
+    logger.info(f'VALIDATION AUC : {val_auc:.4f}')
+    logger.info(f'TEST AUC       : {auc:.4f}')
     logger.info('=' * 50)
     logger.info('\n' + classification_report(y_test, y_pred))
 
