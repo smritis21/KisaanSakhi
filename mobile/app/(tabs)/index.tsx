@@ -1,3 +1,3 @@
-import RetailerCardScreen from '../../src/screens/RetailerCardScreen';
+import DashboardScreen from '../../src/screens/DashboardScreen';
 
-export default RetailerCardScreen;
+export default DashboardScreen;

@@ -13,14 +13,14 @@ DATABASE_URL = os.getenv('DATABASE_URL', 'postgresql://agripulse:agripulse123@lo
 engine = create_engine(DATABASE_URL)
 
 DATASETS = {
-    'retailer_pos':              'data/retailer_pos.csv',
-    'retailer_visit_log':        'data/retailer_visit_log.csv',
-    'retailer_inventory_weekly': 'data/retailer_inventory_weekly.csv',
-    'retailers':                 'data/retailers.csv',
-    'reps_territory':            'data/reps_territory.csv',
-    'growers':                   'data/growers.csv',
-    'whatsapp_campaign':         'data/whatsapp_campaign.csv',
-    'digital_funnel_weekly':     'data/digital_funnel_weekly.csv',
+    'retailer_pos':              'Dataset/retailer_pos.csv',
+    'retailer_visit_log':        'Dataset/retailer_visit_log.csv',
+    'retailer_inventory_weekly': 'Dataset/retailer_inventory_weekly.csv',
+    'retailers':                 'Dataset/retailers.csv',
+    'reps_territory':            'Dataset/reps_territory.csv',
+    'growers':                   'Dataset/growers.csv',
+    'whatsapp_campaign':         'Dataset/whatsapp_campaign.csv',
+    'digital_funnel_weekly':     'Dataset/digital_funnel_weekly.csv',
 }
 
 DATE_COLS = {
@@ -31,7 +31,7 @@ DATE_COLS = {
     'digital_funnel_weekly':     ['week_start_date'],
 }
 
-def ingest_all(data_dir: str = 'data'):
+def ingest_all(data_dir: str = 'Dataset'):
     for table_name, rel_path in DATASETS.items():
         path = Path(rel_path)
         if not path.exists():
@@ -53,13 +53,18 @@ def ingest_all(data_dir: str = 'data'):
             if dropped > 0:
                 logger.warning(f'{table_name}: dropped {dropped} rows with null retailer_id')
 
-        df.to_sql(table_name, engine, if_exists='replace', index=False)
+        # Use chunks to avoid memory issues
+        df.to_sql(table_name, engine, if_exists='replace', index=False, chunksize=10000)
         logger.info(f'Loaded {len(df)} rows into table: {table_name}')
 
     logger.info('All datasets ingested successfully.')
 
 def verify():
     with engine.connect() as conn:
+        # Rollback any failed transaction
+        conn.execute(text('ROLLBACK'))
+        conn.commit()
+        
         for table in DATASETS.keys():
             try:
                 result = conn.execute(text(f'SELECT COUNT(*) FROM {table}')).scalar()
