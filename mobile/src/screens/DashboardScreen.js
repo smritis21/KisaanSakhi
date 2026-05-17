@@ -1,94 +1,79 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
-  View,
-  Text,
-  ScrollView,
-  StyleSheet,
-  SafeAreaView,
+  View, Text, ScrollView, StyleSheet,
+  SafeAreaView, ActivityIndicator,
 } from 'react-native';
 
-const dummyData = [
-  {
-    id: 'REP_0001',
-    name: 'Rajesh Kumar',
-    pending: 3,
-    alerts: 1,
-    syncStatus: 'synced',
-  },
-  {
-    id: 'REP_0002',
-    name: 'Priya Sharma',
-    pending: 0,
-    alerts: 0,
-    syncStatus: 'synced',
-  },
-  {
-    id: 'REP_0003',
-    name: 'Anil Verma',
-    pending: 5,
-    alerts: 2,
-    syncStatus: 'pending',
-  },
-  {
-    id: 'REP_0004',
-    name: 'Sunita Patel',
-    pending: 1,
-    alerts: 3,
-    syncStatus: 'alert',
-  },
-];
+const API_BASE = 'http://10.101.3.38:8000';
+const TOKEN = 'your-secret-key-here';
+const REP_ID = 'REP_0001';
 
 const statusColors = {
-  synced: '#4CAF50',   // green
-  pending: '#FF9800',  // orange
-  alert: '#F44336',    // red
+  OVERDUE_VISIT: '#F44336',
+  STANDARD_VISIT: '#FF9800',
+  LOW_PRIORITY: '#4CAF50',
+  UPSELL: '#2196F3',
 };
 
-function RetailerCard({ rep }) {
+function RetailerCard({ retailer }) {
+  const color = statusColors[retailer.action_code] || '#888';
   return (
     <View style={styles.card}>
       <View style={styles.cardHeader}>
-        <Text style={styles.repName}>{rep.name}</Text>
-        <View style={[styles.statusBadge, { backgroundColor: statusColors[rep.syncStatus] }]}>
-          <Text style={styles.statusText}>{rep.syncStatus.toUpperCase()}</Text>
+        <Text style={styles.retailerName}>{retailer.retailer_id}</Text>
+        <View style={[styles.statusBadge, { backgroundColor: color }]}>
+          <Text style={styles.statusText}>{retailer.action_code}</Text>
         </View>
       </View>
-      <Text style={styles.repId}>ID: {rep.id}</Text>
-      <View style={styles.cardFooter}>
-        <Text style={styles.statText}>📋 Pending Visits: {rep.pending}</Text>
-        <Text style={styles.statText}>🔔 Alerts: {rep.alerts}</Text>
-      </View>
+      <Text style={styles.location}>📍 {retailer.tehsil}, {retailer.district}</Text>
+      <Text style={styles.score}>Opportunity Score: {(retailer.opportunity_score * 100).toFixed(1)}%</Text>
+      <Text style={styles.reason}>"{retailer.top_reason_text}"</Text>
+      <Text style={styles.action}>🎯 {retailer.action_label}</Text>
     </View>
   );
 }
 
 export default function DashboardScreen() {
+  const [retailers, setRetailers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    fetch(`${API_BASE}/api/v1/reps/${REP_ID}/priority-list`, {
+      headers: { authorization: `Bearer ${TOKEN}` },
+    })
+      .then(res => res.json())
+      .then(data => {
+        setRetailers(data.retailers || []);
+        setLoading(false);
+      })
+      .catch(err => {
+        setError('Failed to connect to API');
+        setLoading(false);
+      });
+  }, []);
+
+  if (loading) return (
+    <View style={styles.center}>
+      <ActivityIndicator size="large" color="#1a5276" />
+      <Text>Loading retailers...</Text>
+    </View>
+  );
+
+  if (error) return (
+    <View style={styles.center}>
+      <Text style={styles.errorText}>{error}</Text>
+    </View>
+  );
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>AgriPulse Dashboard</Text>
-        <Text style={styles.headerSubtitle}>Today's Summary</Text>
+        <Text style={styles.headerSubtitle}>{retailers.length} Retailers • REP_0001</Text>
       </View>
-
-      <View style={styles.summaryRow}>
-        <View style={[styles.summaryBox, { backgroundColor: '#4CAF50' }]}>
-          <Text style={styles.summaryNumber}>2</Text>
-          <Text style={styles.summaryLabel}>Synced</Text>
-        </View>
-        <View style={[styles.summaryBox, { backgroundColor: '#FF9800' }]}>
-          <Text style={styles.summaryNumber}>1</Text>
-          <Text style={styles.summaryLabel}>Pending</Text>
-        </View>
-        <View style={[styles.summaryBox, { backgroundColor: '#F44336' }]}>
-          <Text style={styles.summaryNumber}>1</Text>
-          <Text style={styles.summaryLabel}>Alerts</Text>
-        </View>
-      </View>
-
       <ScrollView style={styles.list}>
-        {dummyData.map((rep) => (
-          <RetailerCard key={rep.id} rep={rep} />
-        ))}
+        {retailers.map(r => <RetailerCard key={r.retailer_id} retailer={r} />)}
       </ScrollView>
     </SafeAreaView>
   );
@@ -96,20 +81,19 @@ export default function DashboardScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f0f4f8' },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   header: { backgroundColor: '#1a5276', padding: 20 },
   headerTitle: { color: '#fff', fontSize: 22, fontWeight: 'bold' },
   headerSubtitle: { color: '#aed6f1', fontSize: 14, marginTop: 4 },
-  summaryRow: { flexDirection: 'row', justifyContent: 'space-around', padding: 16 },
-  summaryBox: { borderRadius: 10, padding: 16, alignItems: 'center', width: '28%' },
-  summaryNumber: { color: '#fff', fontSize: 24, fontWeight: 'bold' },
-  summaryLabel: { color: '#fff', fontSize: 12, marginTop: 4 },
-  list: { paddingHorizontal: 16 },
+  list: { paddingHorizontal: 16, marginTop: 8 },
   card: { backgroundColor: '#fff', borderRadius: 12, padding: 16, marginBottom: 12, elevation: 3 },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  repName: { fontSize: 16, fontWeight: 'bold', color: '#1a5276' },
-  statusBadge: { borderRadius: 6, paddingHorizontal: 10, paddingVertical: 4 },
-  statusText: { color: '#fff', fontSize: 11, fontWeight: 'bold' },
-  repId: { color: '#888', fontSize: 12, marginTop: 4 },
-  cardFooter: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 12 },
-  statText: { fontSize: 13, color: '#555' },
+  retailerName: { fontSize: 16, fontWeight: 'bold', color: '#1a5276' },
+  statusBadge: { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4 },
+  statusText: { color: '#fff', fontSize: 10, fontWeight: 'bold' },
+  location: { color: '#777', fontSize: 12, marginTop: 4 },
+  score: { fontSize: 13, fontWeight: '600', color: '#333', marginTop: 8 },
+  reason: { color: '#666', fontSize: 12, fontStyle: 'italic', marginTop: 4 },
+  action: { color: '#1a5276', fontSize: 13, fontWeight: '600', marginTop: 6 },
+  errorText: { color: 'red', fontSize: 16 },
 });
