@@ -1,24 +1,72 @@
 import React, { useEffect, useState } from 'react';
 import {
-  View, Text, ScrollView, StyleSheet, SafeAreaView, RefreshControl,
+  View, Text, ScrollView, StyleSheet, SafeAreaView, ActivityIndicator, RefreshControl,
 } from 'react-native';
 import { useNetInfo } from '@react-native-community/netinfo';
-import { initDb, getPendingCount, getMeta } from '../services/dbService';
+import { getPendingCount } from '../services/dbService';
 import { syncPendingVisits, checkNetworkStatus, pullDeltaScores } from '../services/syncService';
 
+const API_BASE = 'http://192.168.1.44:8001/api/v1';
+const TOKEN = 'agripulse-hackathon-secret-key-2026';
+const REP_ID = 'REP_0001';
+
+const statusColors = {
+  OVERDUE_VISIT: '#F44336',
+  STANDARD_VISIT: '#FF9800',
+  LOW_PRIORITY: '#4CAF50',
+  UPSELL: '#2196F3',
+  synced: '#4CAF50',
+  pending: '#FF9800',
+  alert: '#F44336',
+};
+
+function RetailerCard({ retailer }) {
+  const color = statusColors[retailer.action_code] || '#888';
+  return (
+    <View style={styles.card}>
+      <View style={styles.cardHeader}>
+        <Text style={styles.retailerName}>{retailer.retailer_id}</Text>
+        <View style={[styles.statusBadge, { backgroundColor: color }]}>
+          <Text style={styles.statusText}>{retailer.action_code}</Text>
+        </View>
+      </View>
+      <Text style={styles.location}>📍 {retailer.tehsil}, {retailer.district}</Text>
+      <Text style={styles.score}>Opportunity Score: {(retailer.opportunity_score * 100).toFixed(1)}%</Text>
+      <Text style={styles.reason}>"{retailer.top_reason_text}"</Text>
+      <Text style={styles.action}>🎯 {retailer.action_label}</Text>
+    </View>
+  );
+}
+
 export default function DashboardScreen() {
+  const netInfo = useNetInfo();
+  const [retailers, setRetailers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [pendingCount, setPendingCount] = useState(0);
   const [lastSync, setLastSync] = useState(null);
-  const [isOnline, setIsOnline] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const netInfo = useNetInfo();
+
+  async function loadData() {
+    setLoading(true);
+    try {
+      const response = await fetch(`${API_BASE}/reps/${REP_ID}/priority-list?date=2026-05-15`, {
+        headers: { authorization: `Bearer ${TOKEN}` },
+      });
+      const data = await response.json();
+      setRetailers(data.retailers || []);
+      setPendingCount(await getPendingCount());
+      setLastSync(new Date().toLocaleTimeString());
+      setError(null);
+    } catch (err) {
+      setError('Failed to connect to API');
+    } finally {
+      setLoading(false);
+    }
+  }
 
   useEffect(() => {
-    initDb();
-    loadStatus();
-    if (netInfo.isConnected) {
-      pullDeltaScores('REP_0001', new Date().toISOString().split('T')[0]).then(loadStatus);
-    }
+    loadData();
   }, []);
 
   useEffect(() => {
@@ -28,39 +76,37 @@ export default function DashboardScreen() {
     }
   }, [netInfo]);
 
-  async function loadStatus() {
-    const pending = await getPendingCount();
-    const syncTime = await getMeta('last_sync_REP_0001');
-    setPendingCount(pending);
-    setLastSync(syncTime ? new Date(syncTime).toLocaleTimeString() : 'Never');
-  }
-
   async function onRefresh() {
     setRefreshing(true);
     const online = await checkNetworkStatus();
     if (online) {
       await syncPendingVisits();
-      await pullDeltaScores('REP_0001', new Date().toISOString().split('T')[0]);
+      await pullDeltaScores(REP_ID, new Date().toISOString().split('T')[0]);
     }
-    await loadStatus();
+    await loadData();
     setRefreshing(false);
   }
 
+  const isOnline = netInfo.isConnected;
   const syncedCount = 2;
   const alertCount = 1;
 
-  const statusColors = {
-    synced: '#4CAF50',
-    pending: '#FF9800',
-    alert: '#F44336',
-  };
+  if (loading) return (
+    <SafeAreaView style={styles.container}>
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color="#1a5276" />
+        <Text>Loading retailers...</Text>
+      </View>
+    </SafeAreaView>
+  );
 
-  const reps = [
-    { id: 'REP_0001', name: 'Rajesh Kumar', pending: pendingCount, alerts: alertCount, syncStatus: pendingCount > 0 ? 'pending' : 'synced' },
-    { id: 'REP_0002', name: 'Priya Sharma', pending: 0, alerts: 0, syncStatus: 'synced' },
-    { id: 'REP_0003', name: 'Anil Verma', pending: 5, alerts: 2, syncStatus: 'pending' },
-    { id: 'REP_0004', name: 'Sunita Patel', pending: 1, alerts: 3, syncStatus: 'alert' },
-  ];
+  if (error) return (
+    <SafeAreaView style={styles.container}>
+      <View style={styles.center}>
+        <Text style={styles.errorText}>{error}</Text>
+      </View>
+    </SafeAreaView>
+  );
 
   return (
     <SafeAreaView style={styles.container}>
@@ -87,30 +133,15 @@ export default function DashboardScreen() {
       </View>
 
       <View style={styles.syncInfo}>
-        <Text style={styles.syncInfoText}>
-          Last sync: {lastSync}
-        </Text>
+        <Text style={styles.syncInfoText}>Last sync: {lastSync}</Text>
       </View>
 
       <ScrollView
         style={styles.list}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
-        {reps.map((rep) => (
-          <View key={rep.id} style={styles.card}>
-            <View style={styles.cardHeader}>
-              <Text style={styles.repName}>{rep.name}</Text>
-              <View style={[styles.statusBadge, { backgroundColor: statusColors[rep.syncStatus] }]}>
-                <Text style={styles.statusText}>{rep.syncStatus.toUpperCase()}</Text>
-              </View>
-            </View>
-            <Text style={styles.repId}>ID: {rep.id}</Text>
-            <View style={styles.cardFooter}>
-              <Text style={styles.statText}>📋 Pending: {rep.pending}</Text>
-              <Text style={styles.statText}>🔔 Alerts: {rep.alerts}</Text>
-            </View>
-          </View>
-        ))}
+        <Text style={styles.sectionTitle}>Priority Retailers ({retailers.length})</Text>
+        {retailers.map(r => <RetailerCard key={r.retailer_id} retailer={r} />)}
       </ScrollView>
     </SafeAreaView>
   );
@@ -118,6 +149,7 @@ export default function DashboardScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f0f4f8' },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   header: { backgroundColor: '#1a5276', padding: 20, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   headerTitle: { color: '#fff', fontSize: 22, fontWeight: 'bold' },
   headerSubtitle: { color: '#aed6f1', fontSize: 14 },
@@ -127,13 +159,16 @@ const styles = StyleSheet.create({
   summaryLabel: { color: '#fff', fontSize: 12, marginTop: 4 },
   syncInfo: { paddingHorizontal: 20, paddingBottom: 8 },
   syncInfoText: { color: '#666', fontSize: 12 },
-  list: { paddingHorizontal: 16 },
+  list: { paddingHorizontal: 16, marginTop: 8 },
+  sectionTitle: { fontSize: 16, fontWeight: 'bold', color: '#333', marginBottom: 12 },
   card: { backgroundColor: '#fff', borderRadius: 12, padding: 16, marginBottom: 12, elevation: 3 },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  repName: { fontSize: 16, fontWeight: 'bold', color: '#1a5276' },
-  statusBadge: { borderRadius: 6, paddingHorizontal: 10, paddingVertical: 4 },
-  statusText: { color: '#fff', fontSize: 11, fontWeight: 'bold' },
-  repId: { color: '#888', fontSize: 12, marginTop: 4 },
-  cardFooter: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 12 },
-  statText: { fontSize: 13, color: '#555' },
+  retailerName: { fontSize: 16, fontWeight: 'bold', color: '#1a5276' },
+  statusBadge: { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4 },
+  statusText: { color: '#fff', fontSize: 10, fontWeight: 'bold' },
+  location: { color: '#777', fontSize: 12, marginTop: 4 },
+  score: { fontSize: 13, fontWeight: '600', color: '#333', marginTop: 8 },
+  reason: { color: '#666', fontSize: 12, fontStyle: 'italic', marginTop: 4 },
+  action: { color: '#1a5276', fontSize: 13, fontWeight: '600', marginTop: 6 },
+  errorText: { color: 'red', fontSize: 16 },
 });
