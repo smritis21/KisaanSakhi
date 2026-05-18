@@ -58,7 +58,7 @@ function RetailerCard({ retailer, onLogVisit }) {
       )}
 
       <Text style={styles.sectionLabel}>Opportunity Score</Text>
-      <ScoreBar score={Math.round(retailer.opportunity_score || 0)} />
+      <ScoreBar score={Math.round((retailer.opportunity_score || 0) * 100)} />
 
       <Text style={styles.sectionLabel}>Recommended Action</Text>
       <View style={styles.actionChip}>
@@ -117,12 +117,9 @@ export default function RetailerCardScreen() {
   async function loadData() {
     const today = new Date().toISOString().split('T')[0];
     const list = await getPriorityList('REP_0001', today);
-    console.log('[UI] Loaded from SQLite:', list.length, 'retailers');
-    if (list.length > 0) {
-      console.log('[UI] First retailer:', list[0].retailer_id, list[0].tehsil, list[0].district);
-    }
     setRetailers(list.length > 0 ? list : getDummyRetailers());
     setPendingCount(await getPendingCount());
+    setLastSync(new Date().toLocaleTimeString());
   }
 
   async function onRefresh() {

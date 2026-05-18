@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text
 from api.core.database import get_db
 from api.core.auth import verify_token
-from datetime import date
+from datetime import date, timezone
 import json
 
 router = APIRouter()
@@ -42,7 +42,7 @@ def get_priority_list(
         if row.get('shap_reasons') and isinstance(row['shap_reasons'], str):
             try:
                 row['shap_reasons'] = json.loads(row['shap_reasons'])
-            except Exception:
+            except (json.JSONDecodeError, TypeError) as e:
                 pass
         retailers.append(row)
 

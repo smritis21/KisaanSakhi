@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from typing import List, Optional
 from api.core.database import get_db
 from api.core.auth import verify_token
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 import json
 
 router = APIRouter()
@@ -51,11 +51,12 @@ def sync_visits(
             })
             inserted += 1
         except Exception as e:
-            pass
+            db.rollback()
+            raise
     db.commit()
     return {
         'synced':    inserted,
-        'timestamp': datetime.utcnow().isoformat(),
+        'timestamp': datetime.now(timezone.utc).isoformat(),
     }
 
 
@@ -96,7 +97,7 @@ def get_delta(
 
     return {
         'rep_id':         rep_id,
-        'sync_timestamp': datetime.utcnow().isoformat(),
+        'sync_timestamp': datetime.now(timezone.utc).isoformat(),
         'count':          len(records),
         'records':        records,
     }

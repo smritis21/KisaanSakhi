@@ -1,8 +1,38 @@
 import { useNetInfo } from '@react-native-community/netinfo';
 import * as Network from 'expo-network';
+import * as SecureStore from 'expo-secure-store';
 import { getPendingVisits, markVisitsSynced, getPendingCount, setMeta, getMeta, saveDeltaRecords, getPriorityList, syncPendingVisitsToBackend } from './dbService';
+import { getApiConfig, getCurrentRepId, getConfig } from './configService';
 
-const API_BASE = 'http://192.168.1.44:8001/api/v1';
+// Get API config from secure storage or use dynamic config
+async function getApiEndpoint() {
+  try {
+    const { baseUrl } = await getApiConfig();
+    const repId = await getCurrentRepId();
+    return { baseUrl, repId };
+  } catch (error) {
+    // Fallback to stored values
+    const baseUrl = await SecureStore.getItemAsync('api_base_url') || 'http://localhost:8000/api/v1';
+    const repId = await SecureStore.getItemAsync('default_rep_id') || 'REP_0001';
+    return { baseUrl, repId };
+  }
+}
+
+// Validate URL to prevent SSRF attacks
+function isValidUrl(url) {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return false;
+    const hostname = parsed.hostname;
+    // Block private ranges except local network (192.168.x.x allowed for demo)
+    if (/^(10\.|172\.(1[6-9]|2[0-9]|3[0-1])\.)/.test(hostname)) return false;
+    // Allow localhost and local network IPs
+    if (hostname === 'localhost' || hostname === '127.0.0.1' || /^192\.168\./.test(hostname)) return true;
+    return false;
+  } catch {
+    return false;
+  }
+}
 
 // Simple UUID generator for React Native
 function generateId() {
@@ -66,23 +96,36 @@ export async function syncPendingVisits() {
   }
 }
 
-export async function pullDeltaScores(repId, scoreDate) {
+export async function pullDeltaScores(repId = null, scoreDate = null) {
   const isOnline = await checkNetworkStatus();
   if (!isOnline) return { success: false, reason: 'Offline' };
   
   try {
-    const response = await fetch(`${API_BASE}/reps/${repId}/priority-list?date=${scoreDate}`, {
-      headers: { 'Authorization': 'Bearer agripulse-hackathon-secret-key-2026' }
+    const { baseUrl, repId: configRepId } = await getApiEndpoint();
+    const targetRepId = repId || configRepId;
+    const targetDate = scoreDate || new Date().toISOString().split('T')[0];
+    
+    const url = `${baseUrl}/reps/${targetRepId}/priority-list?date=${targetDate}`;
+    
+    if (!isValidUrl(url)) {
+      throw new Error('Invalid URL detected');
+    }
+    
+    const { token } = await getApiConfig();
+    
+    const response = await fetch(url, {
+      headers: { 'Authorization': `Bearer ${token}` }
     });
-    if (!response.ok) throw new Error('Failed to fetch scores');
+    
+    if (!response.ok) throw new Error(`Failed to fetch scores: ${response.status}`);
     
     const result = await response.json();
     const records = result.retailers || [];
     
     if (records.length > 0) {
-      const recordsWithRep = records.map(r => ({ ...r, rep_id: repId }));
+      const recordsWithRep = records.map(r => ({ ...r, rep_id: targetRepId }));
       await saveDeltaRecords(recordsWithRep);
-      await setMeta(`last_sync_${repId}`, new Date().toISOString());
+      await setMeta(`last_sync_${targetRepId}`, new Date().toISOString());
     }
     
     return { success: true, count: records.length };
@@ -92,7 +135,7 @@ export async function pullDeltaScores(repId, scoreDate) {
   }
 }
 
-export async function fullSync(repId, scoreDate) {
+export async function fullSync(repId = null, scoreDate = null) {
   const results = { visits: null, scores: null };
   
   const visitResult = await syncPendingVisits();
@@ -104,10 +147,27 @@ export async function fullSync(repId, scoreDate) {
   return results;
 }
 
-export async function getLastSyncTime(repId) {
-  return await getMeta(`last_sync_${repId}`);
+export async function getLastSyncTime(repId = null) {
+  const { repId: configRepId } = await getApiEndpoint();
+  const targetRepId = repId || configRepId;
+  return await getMeta(`last_sync_${targetRepId}`);
 }
 
 export function isSyncInProgress() {
   return isSyncing;
+}
+
+// Get sync status with dynamic config
+export async function getSyncStatus() {
+  const config = await getConfig();
+  const pending = await getPendingCount();
+  const lastSync = await getLastSyncTime();
+  
+  return {
+    isOnline: await checkNetworkStatus(),
+    isSyncing,
+    pendingCount: pending,
+    lastSyncTime: lastSync,
+    syncInterval: config?.syncIntervalMinutes || 5,
+  };
 }
