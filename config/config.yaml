@@ -1,0 +1,108 @@
+# AgriPulse AI - Dynamic Configuration
+# All hardcoded values moved here for dynamic behavior
+
+# Application Configuration
+app:
+  name: "AgriPulse AI"
+  version: "2.0.0"
+  environment: "${APP_ENV:development}"
+  
+# API Configuration
+api:
+  base_url: "${API_BASE_URL:http://localhost:8000/api/v1}"
+  auth_token: "${API_AUTH_TOKEN:}"
+  timeout_seconds: 30
+  retry_attempts: 3
+
+# Database Configuration
+database:
+  host: "${DB_HOST:localhost}"
+  port: "${DB_PORT:5432}"
+  name: "${DB_NAME:agripulse}"
+  user: "${DB_USER:agripulse}"
+  password: "${DB_PASSWORD:agripulse123}"
+
+# ML Model Configuration
+ml:
+  models_dir: "${MODELS_DIR:models}"
+  xgboost_model: "xgboost_opportunity_scorer.pkl"
+  feature_cols: "feature_cols.pkl"
+  isolation_forest: "isolation_forest.pkl"
+  anomaly_scaler: "anomaly_scaler.pkl"
+  anomaly_features: "anomaly_features.pkl"
+  label_encoders:
+    state: "le_state.pkl"
+    district: "le_district.pkl"
+    tehsil: "le_tehsil.pkl"
+
+# Scoring Configuration
+scoring:
+  default_score_date: "${SCORE_DATE:today}"
+  min_opportunity_score: 0.3
+  max_retailers_per_page: 50
+  default_page_size: 20
+
+# Next Best Action Rules - DYNAMIC
+action_rules:
+  stockout:
+    enabled: true
+    threshold_days: 14
+    min_score: 0.7
+    priority: 1
+  overdue_high:
+    enabled: true
+    threshold_days: 21
+    min_score: 0.7
+    priority: 1
+  overdue_visit:
+    enabled: true
+    threshold_days: 14
+    min_score: 0.6
+    priority: 2
+  anomaly_spike:
+    enabled: true
+    min_revenue_growth: 0.3
+    priority: 2
+  standard_visit:
+    enabled: true
+    min_score: 0.6
+    priority: 3
+  low_priority:
+    enabled: true
+    priority: 4
+
+# Feature Engineering Configuration
+features:
+  pos_windows_days: [7, 30, 90]
+  visit_windows_days: [30, 90]
+  inventory_lookback_weeks: 12
+  whatsapp_lookback_days: 30
+  revenue_growth_clip: 5.0
+
+# SHAP Explanation Configuration
+shap:
+  top_n_features: 3
+  min_shap_absolute_value: 0.01
+
+# Mobile App Configuration
+mobile:
+  default_rep_id: "${DEFAULT_REP_ID:REP_0001}"
+  sync_interval_minutes: 5
+  max_offline_records: 1000
+  cache_ttl_hours: 24
+
+# Route Optimization Configuration
+route:
+  max_retailers_per_day: 20
+  cluster_by_tehsil: true
+  priority_threshold: 2
+
+# Anomaly Detection Configuration
+anomaly:
+  contamination: 0.05
+  enable_real_time: true
+
+# Logging Configuration
+logging:
+  level: "${LOG_LEVEL:INFO}"
+  format: "%(asctime)s %(levelname)s %(message)s"

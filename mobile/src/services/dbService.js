@@ -1,11 +1,15 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// In-memory storage for visit queue (syncs to PostgreSQL backend)
+const API_BASE_URL = 'http://192.168.1.24:8000/api/v1';
+const AUTH_TOKEN = 'agripulse-hackathon-secret-key-2026';
+
 let visitQueue = [];
 let retailers = [];
 let lastSyncTime = null;
 
-const API_BASE = 'http://192.168.1.44:8001/api/v1';
+async function getApiConfig() {
+  return { baseUrl: API_BASE_URL, token: AUTH_TOKEN };
+}
 
 export async function initDb() {
   try {
@@ -44,6 +48,11 @@ export async function saveDeltaRecords(records) {
 }
 
 export async function getPriorityList(repId, scoreDate) {
+  await initDb();
+  return retailers;
+}
+
+export async function getAllRetailers() {
   await initDb();
   return retailers;
 }
@@ -121,11 +130,12 @@ export async function syncPendingVisitsToBackend() {
   }
   
   try {
-    const response = await fetch(`${API_BASE}/sync/visits`, {
+    const { baseUrl, token } = await getApiConfig();
+    const response = await fetch(`${baseUrl}/sync/visits`, {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer agripulse-hackathon-secret-key-2026'
+        'Authorization': `Bearer ${token}`
       },
       body: JSON.stringify({ visits: pending }),
     });

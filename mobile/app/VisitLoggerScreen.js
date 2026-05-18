@@ -1,5 +1,5 @@
 import { useLocalSearchParams } from 'expo-router';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, SafeAreaView,
   TouchableOpacity, Alert, TextInput, ActivityIndicator,
@@ -7,18 +7,17 @@ import {
 import SyncStatusBar from '../src/components/SyncStatusBar';
 import { queueVisit, syncPendingVisits, checkNetworkStatus } from '../src/services/syncService';
 import { getPendingCount } from '../src/services/dbService';
+import { AppColors, Shadow } from '../constants/theme';
 
 const OUTCOME_CODES = [
-  { code: 'VISIT_COMPLETE', label: 'Visit Completed' },
-  { code: 'NOT_AVAILABLE', label: 'Retailer Not Available' },
-  { code: 'CLOSED', label: 'Shop Closed' },
-  { code: 'REFUSED', label: 'Visit Refused' },
-  { code: 'RESCHEDULED', label: 'Rescheduled' },
+  { code: 'VISIT_COMPLETE', label: '✅ Completed',   color: AppColors.success },
+  { code: 'NOT_AVAILABLE',  label: '🚫 Not Available', color: AppColors.warning },
+  { code: 'CLOSED',         label: '🔒 Shop Closed',  color: AppColors.textMuted },
+  { code: 'REFUSED',        label: '❌ Refused',      color: AppColors.danger },
+  { code: 'RESCHEDULED',    label: '📅 Rescheduled',  color: AppColors.info },
 ];
 
-const PRODUCT_RECOMMENDATIONS = [
-  'Urea', 'DAP', 'Potash', 'Pesticides', 'Seeds', 'Micro-nutrients', 'Organic Fertilizer',
-];
+const PRODUCTS = ['Urea', 'DAP', 'Potash', 'Pesticides', 'Seeds', 'Micro-nutrients', 'Organic Fertilizer'];
 
 export default function VisitLoggerScreen() {
   const params = useLocalSearchParams();
@@ -30,146 +29,144 @@ export default function VisitLoggerScreen() {
   const [pendingCount, setPendingCount] = useState(0);
   const [isOnline, setIsOnline] = useState(true);
 
-  // Parse retailer from params
   useEffect(() => {
     if (params.retailer) {
       try {
-        const parsed = typeof params.retailer === 'string' 
-          ? JSON.parse(params.retailer) 
-          : params.retailer;
-        setRetailer(parsed);
-      } catch (e) {
-        console.log('[Visit] Error parsing retailer:', e);
-      }
+        setRetailer(typeof params.retailer === 'string' ? JSON.parse(params.retailer) : params.retailer);
+      } catch (e) { console.log('[Visit] parse error:', e); }
     }
   }, [params.retailer]);
 
-  // Load status once on mount
   useEffect(() => {
     let mounted = true;
-    
-    async function loadStatus() {
-      if (!mounted) return;
+    async function load() {
       const count = await getPendingCount();
       const online = await checkNetworkStatus();
-      if (mounted) {
-        setPendingCount(count);
-        setIsOnline(online);
-      }
+      if (mounted) { setPendingCount(count); setIsOnline(online); }
     }
-    
-    loadStatus();
-    
-    return () => {
-      mounted = false;
-    };
+    load();
+    return () => { mounted = false; };
   }, []);
 
   async function handleSubmit() {
-    if (!outcome) {
-      Alert.alert('Required', 'Please select an outcome');
-      return;
-    }
-
+    if (!outcome) { Alert.alert('Required', 'Please select a visit outcome.'); return; }
     setIsSubmitting(true);
     try {
       await queueVisit({
         retailer_id: retailer?.retailer_id || 'UNKNOWN',
-        rep_id: 'REP_0001',
+        rep_id: 'REP_0016',
         outcome_code: outcome,
         product_recommended: product,
         notes,
       });
-
-      Alert.alert(
-        'Visit Logged',
-        'Data saved locally. Will sync when online.',
-        [{ text: 'OK', onPress: () => {
-          setOutcome('');
-          setProduct('');
-          setNotes('');
-        }}]
-      );
-
-      if (isOnline) {
-        syncPendingVisits();
-      }
-    } catch (error) {
-      Alert.alert('Error', 'Failed to save visit: ' + error.message);
+      Alert.alert('Visit Logged ✅', isOnline ? 'Saved and syncing…' : 'Saved offline. Will sync when connected.', [{
+        text: 'OK', onPress: () => { setOutcome(''); setProduct(''); setNotes(''); }
+      }]);
+      if (isOnline) syncPendingVisits();
+    } catch (err) {
+      Alert.alert('Error', err.message);
     } finally {
       setIsSubmitting(false);
     }
   }
 
+  const selectedOutcome = OUTCOME_CODES.find(o => o.code === outcome);
+
   return (
     <SafeAreaView style={styles.container}>
+      {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Log Retailer Visit</Text>
-        {retailer && <Text style={styles.retailerName}>📍 {retailer.retailer_name || retailer.retailer_id}</Text>}
+        <Text style={styles.headerEyebrow}>AgriPulse AI</Text>
+        <Text style={styles.headerTitle}>Log Visit</Text>
+        {retailer && (
+          <View style={styles.retailerPill}>
+            <Text style={styles.retailerPillText}>📍 {retailer.retailer_name || retailer.retailer_id}</Text>
+          </View>
+        )}
       </View>
 
-      <SyncStatusBar
-        pendingCount={pendingCount}
-        onForceSync={() => syncPendingVisits()}
-      />
+      <SyncStatusBar pendingCount={pendingCount} onForceSync={() => syncPendingVisits()} />
 
       {!isOnline && (
         <View style={styles.offlineBanner}>
-          <Text style={styles.offlineText}>✈️ Offline Mode - Data will sync automatically</Text>
+          <Text style={styles.offlineText}>✈️  Offline — data will sync automatically when connected</Text>
         </View>
       )}
 
-      <ScrollView style={styles.form}>
-        <Text style={styles.label}>Visit Outcome *</Text>
-        <View style={styles.chipGroup}>
-          {OUTCOME_CODES.map((o) => (
-            <TouchableOpacity
-              key={o.code}
-              style={[styles.chip, outcome === o.code && styles.chipSelected]}
-              onPress={() => setOutcome(o.code)}
-            >
-              <Text style={[styles.chipText, outcome === o.code && styles.chipTextSelected]}>
-                {o.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
+      <ScrollView style={styles.form} contentContainerStyle={{ paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
+
+        {/* Outcome */}
+        <Text style={styles.sectionLabel}>Visit Outcome <Text style={styles.required}>*</Text></Text>
+        <View style={styles.chipGrid}>
+          {OUTCOME_CODES.map(o => {
+            const selected = outcome === o.code;
+            return (
+              <TouchableOpacity
+                key={o.code}
+                style={[styles.chip, selected && { backgroundColor: o.color, borderColor: o.color }]}
+                onPress={() => setOutcome(o.code)}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{o.label}</Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
 
-        <Text style={styles.label}>Product Recommended</Text>
-        <View style={styles.chipGroup}>
-          {PRODUCT_RECOMMENDATIONS.map((p) => (
-            <TouchableOpacity
-              key={p}
-              style={[styles.chip, product === p && styles.chipSelected]}
-              onPress={() => setProduct(p)}
-            >
-              <Text style={[styles.chipText, product === p && styles.chipTextSelected]}>{p}</Text>
-            </TouchableOpacity>
-          ))}
+        {/* Product */}
+        <Text style={styles.sectionLabel}>Product Recommended</Text>
+        <View style={styles.chipGrid}>
+          {PRODUCTS.map(p => {
+            const selected = product === p;
+            return (
+              <TouchableOpacity
+                key={p}
+                style={[styles.chip, selected && { backgroundColor: AppColors.primaryMid, borderColor: AppColors.primaryMid }]}
+                onPress={() => setProduct(selected ? '' : p)}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{p}</Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
 
-        <Text style={styles.label}>Notes</Text>
+        {/* Notes */}
+        <Text style={styles.sectionLabel}>Notes</Text>
         <TextInput
           style={styles.notesInput}
           value={notes}
           onChangeText={setNotes}
-          placeholder="Add any additional notes..."
+          placeholder="Add any observations or follow-up notes…"
+          placeholderTextColor={AppColors.textMuted}
           multiline
           numberOfLines={4}
         />
 
+        {/* Summary card */}
+        {(outcome || product) && (
+          <View style={[styles.summaryCard, Shadow.sm]}>
+            <Text style={styles.summaryTitle}>Summary</Text>
+            {selectedOutcome && (
+              <Text style={[styles.summaryLine, { color: selectedOutcome.color }]}>
+                {selectedOutcome.label}
+              </Text>
+            )}
+            {product && <Text style={styles.summaryLine}>🌱 {product}</Text>}
+          </View>
+        )}
+
+        {/* Submit */}
         <TouchableOpacity
-          style={[styles.submitButton, isSubmitting && styles.submitButtonDisabled]}
+          style={[styles.submitBtn, isSubmitting && styles.submitBtnDisabled]}
           onPress={handleSubmit}
           disabled={isSubmitting}
+          activeOpacity={0.85}
         >
-          {isSubmitting ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.submitButtonText}>
-              {isOnline ? '💾 Save & Sync' : '💾 Save (Offline)'}
-            </Text>
-          )}
+          {isSubmitting
+            ? <ActivityIndicator color={AppColors.white} />
+            : <Text style={styles.submitBtnText}>{isOnline ? '💾  Save & Sync' : '💾  Save Offline'}</Text>
+          }
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
@@ -177,21 +174,33 @@ export default function VisitLoggerScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f0f4f8' },
-  header: { backgroundColor: '#1a5276', padding: 20, paddingBottom: 16 },
-  headerTitle: { color: '#fff', fontSize: 22, fontWeight: 'bold' },
-  retailerName: { color: '#aed6f1', fontSize: 14, marginTop: 4 },
-  offlineBanner: { backgroundColor: '#f39c12', padding: 10, alignItems: 'center' },
-  offlineText: { color: '#fff', fontWeight: 'bold', fontSize: 14 },
-  form: { padding: 16 },
-  label: { fontSize: 14, fontWeight: '600', color: '#333', marginBottom: 8, marginTop: 12 },
-  chipGroup: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip: { backgroundColor: '#e0e0e0', borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8 },
-  chipSelected: { backgroundColor: '#1a5276' },
-  chipText: { fontSize: 13, color: '#555' },
-  chipTextSelected: { color: '#fff', fontWeight: '600' },
-  notesInput: { backgroundColor: '#fff', borderRadius: 8, padding: 12, fontSize: 14, minHeight: 80, textAlignVertical: 'top' },
-  submitButton: { backgroundColor: '#1a5276', borderRadius: 8, padding: 14, alignItems: 'center', marginTop: 20 },
-  submitButtonDisabled: { backgroundColor: '#95a5a6' },
-  submitButtonText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
+  container:          { flex: 1, backgroundColor: AppColors.bg },
+
+  header:             { backgroundColor: AppColors.primary, paddingHorizontal: 20, paddingTop: 18, paddingBottom: 16 },
+  headerEyebrow:      { color: '#a5d6a7', fontSize: 11, fontWeight: '600', letterSpacing: 1.2, textTransform: 'uppercase' },
+  headerTitle:        { color: AppColors.white, fontSize: 24, fontWeight: '800', marginTop: 2 },
+  retailerPill:       { marginTop: 10, alignSelf: 'flex-start', backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 5 },
+  retailerPillText:   { color: AppColors.white, fontSize: 13, fontWeight: '600' },
+
+  offlineBanner:      { backgroundColor: AppColors.warning, padding: 10, alignItems: 'center' },
+  offlineText:        { color: AppColors.white, fontWeight: '700', fontSize: 13 },
+
+  form:               { flex: 1, paddingHorizontal: 16, paddingTop: 8 },
+  sectionLabel:       { fontSize: 13, fontWeight: '700', color: AppColors.textSecondary, marginTop: 20, marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.6 },
+  required:           { color: AppColors.danger },
+
+  chipGrid:           { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  chip:               { borderWidth: 1.5, borderColor: AppColors.border, borderRadius: 24, paddingHorizontal: 14, paddingVertical: 8, backgroundColor: AppColors.white },
+  chipText:           { fontSize: 13, color: AppColors.textSecondary, fontWeight: '600' },
+  chipTextSelected:   { color: AppColors.white, fontWeight: '700' },
+
+  notesInput:         { backgroundColor: AppColors.white, borderRadius: 12, padding: 14, fontSize: 14, minHeight: 90, textAlignVertical: 'top', borderWidth: 1, borderColor: AppColors.border, color: AppColors.textPrimary },
+
+  summaryCard:        { backgroundColor: AppColors.white, borderRadius: 12, padding: 14, marginTop: 20, borderLeftWidth: 4, borderLeftColor: AppColors.primaryMid },
+  summaryTitle:       { fontSize: 12, fontWeight: '700', color: AppColors.textMuted, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.6 },
+  summaryLine:        { fontSize: 14, fontWeight: '600', color: AppColors.textPrimary, marginBottom: 4 },
+
+  submitBtn:          { backgroundColor: AppColors.primary, borderRadius: 14, padding: 16, alignItems: 'center', marginTop: 24 },
+  submitBtnDisabled:  { backgroundColor: AppColors.textMuted },
+  submitBtnText:      { color: AppColors.white, fontWeight: '800', fontSize: 16 },
 });

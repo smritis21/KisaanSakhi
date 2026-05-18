@@ -1,0 +1,16 @@
+feature,importance,importance_pct,cumulative_importance,display_name
+sku_count,0.27316278,30.131355,30.131355,SKU Count
+txn_count_30d,0.081712425,9.0133295,39.144684,Transactions (30 Days)
+days_since_last_visit,0.05215655,5.753154,44.89784,Days Since Last Visit
+stockout_flag,0.04924321,5.4317966,50.329636,Stockout Alert
+tilt_stock,0.04772287,5.2640944,55.59373,Tilt Stock Level
+tehsil_encoded,0.045724984,5.043717,60.637447,Tehsil
+total_stock,0.045620725,5.0322165,65.66966,Total Inventory Stock
+visit_count_90d,0.04443561,4.9014916,70.57115,Visits in Last 90 Days
+pos_revenue_90d,0.04351433,4.7998695,75.37102,POS Revenue (90 Days)
+pos_revenue_30d,0.03996687,4.408565,79.77958,POS Revenue (30 Days)
+tilt_depletion_rate,0.03903317,4.305573,84.08515,Tilt Depletion Rate
+pos_revenue_mom_growth,0.037204526,4.1038637,88.18902,Revenue Growth Month-over-Month
+district_encoded,0.036245998,3.9981327,92.18715,District
+days_to_stockout,0.035674285,3.9350696,96.122215,Days Until Stockout
+state_encoded,0.03515489,3.8777776,99.99999,State

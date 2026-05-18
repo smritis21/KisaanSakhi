@@ -1,103 +1,173 @@
-import { useLocalSearchParams } from 'expo-router';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
-  View, Text, ScrollView, StyleSheet, SafeAreaView, TouchableOpacity, Alert,
+  View, Text, ScrollView, StyleSheet, SafeAreaView,
+  TouchableOpacity, Alert, RefreshControl,
 } from 'react-native';
 import { getAllVisits, getPendingCount } from '../../src/services/dbService';
 import { syncPendingVisits, checkNetworkStatus } from '../../src/services/syncService';
+import { AppColors, Shadow } from '../../constants/theme';
 
-const OUTCOME_LABELS = {
-  'VISIT_COMPLETE': 'Visit Completed',
-  'NOT_AVAILABLE': 'Retailer Not Available',
-  'CLOSED': 'Shop Closed',
-  'REFUSED': 'Visit Refused',
-  'RESCHEDULED': 'Rescheduled',
+const OUTCOME_META = {
+  VISIT_COMPLETE: { label: 'Visit Completed',       color: AppColors.success, icon: '✅' },
+  NOT_AVAILABLE:  { label: 'Retailer Not Available', color: AppColors.warning, icon: '🚫' },
+  CLOSED:         { label: 'Shop Closed',            color: AppColors.textMuted, icon: '🔒' },
+  REFUSED:        { label: 'Visit Refused',          color: AppColors.danger,  icon: '❌' },
+  RESCHEDULED:    { label: 'Rescheduled',            color: AppColors.info,    icon: '📅' },
 };
+
+function VisitCard({ visit }) {
+  const meta = OUTCOME_META[visit.outcome_code] || { label: visit.outcome_code, color: AppColors.textMuted, icon: '📋' };
+  const synced = !!visit.synced;
+  const ts = visit.visit_timestamp ? new Date(visit.visit_timestamp) : null;
+
+  return (
+    <View style={[styles.card, Shadow.sm]}>
+      <View style={[styles.cardAccent, { backgroundColor: meta.color }]} />
+      <View style={styles.cardBody}>
+        <View style={styles.cardTop}>
+          <Text style={styles.retailerId} numberOfLines={1}>{visit.retailer_id}</Text>
+          <View style={[styles.syncBadge, { backgroundColor: synced ? AppColors.successLight : AppColors.warningLight }]}>
+            <Text style={[styles.syncBadgeText, { color: synced ? AppColors.success : AppColors.warning }]}>
+              {synced ? '✓ Synced' : '⏳ Pending'}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.outcomeRow}>
+          <Text style={styles.outcomeIcon}>{meta.icon}</Text>
+          <Text style={[styles.outcomeLabel, { color: meta.color }]}>{meta.label}</Text>
+        </View>
+
+        {visit.product_recommended ? (
+          <View style={styles.tagRow}>
+            <View style={styles.tag}>
+              <Text style={styles.tagText}>🌱 {visit.product_recommended}</Text>
+            </View>
+          </View>
+        ) : null}
+
+        {visit.notes ? (
+          <Text style={styles.notes} numberOfLines={2}>"{visit.notes}"</Text>
+        ) : null}
+
+        {ts && (
+          <Text style={styles.timestamp}>
+            {ts.toLocaleDateString()} · {ts.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          </Text>
+        )}
+      </View>
+    </View>
+  );
+}
 
 export default function VisitHistoryScreen() {
   const [visits, setVisits] = useState([]);
   const [pendingCount, setPendingCount] = useState(0);
   const [isOnline, setIsOnline] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const loadVisits = useCallback(async () => {
+    const all = await getAllVisits();
+    setVisits(all.slice().reverse()); // newest first
+    setPendingCount(await getPendingCount());
+    setIsOnline(await checkNetworkStatus());
+  }, []);
 
   useEffect(() => {
     loadVisits();
-    
-    const interval = setInterval(() => {
-      loadVisits();
-    }, 3000);
-    
-    return () => clearInterval(interval);
-  }, []);
+  }, [loadVisits]);
 
-  async function loadVisits() {
-    const allVisits = await getAllVisits();
-    setVisits(allVisits);
-    setPendingCount(await getPendingCount());
-    setIsOnline(await checkNetworkStatus());
-  }
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    const online = await checkNetworkStatus();
+    setIsOnline(online);
+    if (online) await syncPendingVisits();
+    await loadVisits();
+    setRefreshing(false);
+  }, [loadVisits]);
 
   async function handleSync() {
     const result = await syncPendingVisits();
+    await loadVisits();
     if (result.success) {
-      Alert.alert('Synced', `${result.synced} visits synced to server`);
-      loadVisits();
+      Alert.alert('Synced ✅', `${result.synced} visit${result.synced !== 1 ? 's' : ''} uploaded to server.`);
     } else {
-      Alert.alert('Error', result.reason || 'Failed to sync');
+      Alert.alert('Sync failed', result.reason || 'Unknown error');
     }
   }
 
+  const syncedCount   = visits.filter(v => v.synced).length;
+  const pendingVisits = visits.filter(v => !v.synced).length;
+
   return (
     <SafeAreaView style={styles.container}>
+      {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Visit History</Text>
-        <Text style={styles.subtitle}>
-          {isOnline ? '🟢 Online' : '🔴 Offline'}
-        </Text>
+        <View>
+          <Text style={styles.headerEyebrow}>AgriPulse AI</Text>
+          <Text style={styles.headerTitle}>Visit History</Text>
+          <Text style={styles.headerRep}>👤 REP_0016</Text>
+        </View>
+        <View style={[styles.onlinePill, { backgroundColor: isOnline ? '#a5d6a7' : '#ef9a9a' }]}>
+          <View style={[styles.onlineDot, { backgroundColor: isOnline ? AppColors.success : AppColors.danger }]} />
+          <Text style={[styles.onlineText, { color: isOnline ? AppColors.success : AppColors.danger }]}>
+            {isOnline ? 'Online' : 'Offline'}
+          </Text>
+        </View>
       </View>
 
-      <View style={styles.statusBar}>
-        <Text style={styles.statusText}>
-          {pendingCount} pending sync
-        </Text>
+      {/* Stats bar */}
+      <View style={styles.statsBar}>
+        <View style={styles.statItem}>
+          <Text style={styles.statNum}>{visits.length}</Text>
+          <Text style={styles.statLabel}>Total</Text>
+        </View>
+        <View style={styles.statDivider} />
+        <View style={styles.statItem}>
+          <Text style={[styles.statNum, { color: AppColors.success }]}>{syncedCount}</Text>
+          <Text style={styles.statLabel}>Synced</Text>
+        </View>
+        <View style={styles.statDivider} />
+        <View style={styles.statItem}>
+          <Text style={[styles.statNum, { color: pendingVisits > 0 ? AppColors.warning : AppColors.textMuted }]}>{pendingVisits}</Text>
+          <Text style={styles.statLabel}>Pending</Text>
+        </View>
         {pendingCount > 0 && isOnline && (
-          <TouchableOpacity style={styles.syncButton} onPress={handleSync}>
-            <Text style={styles.syncButtonText}>Sync Now</Text>
-          </TouchableOpacity>
+          <>
+            <View style={styles.statDivider} />
+            <TouchableOpacity style={styles.syncBtn} onPress={handleSync} activeOpacity={0.8}>
+              <Text style={styles.syncBtnText}>Sync now</Text>
+            </TouchableOpacity>
+          </>
         )}
       </View>
 
-      <ScrollView style={styles.list}>
+      <ScrollView
+        style={styles.list}
+        contentContainerStyle={{ paddingBottom: 24 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[AppColors.primaryMid]}
+            tintColor={AppColors.primaryMid}
+            title="Pull to refresh & sync"
+            titleColor={AppColors.textMuted}
+          />
+        }
+      >
+        <Text style={styles.sectionLabel}>
+          {visits.length > 0 ? `${visits.length} visit${visits.length !== 1 ? 's' : ''} logged` : ''}
+        </Text>
+
         {visits.length === 0 ? (
-          <Text style={styles.emptyText}>No visits logged yet</Text>
+          <View style={styles.emptyBox}>
+            <Text style={styles.emptyIcon}>📋</Text>
+            <Text style={styles.emptyText}>No visits logged yet</Text>
+            <Text style={styles.emptyHint}>Pull down to refresh</Text>
+          </View>
         ) : (
-          visits.map((visit) => (
-            <View key={visit.queue_id} style={styles.card}>
-              <View style={styles.cardHeader}>
-                <Text style={styles.retailerId}>{visit.retailer_id}</Text>
-                <View style={[styles.syncBadge, { backgroundColor: visit.synced ? '#4CAF50' : '#FF9800' }]}>
-                  <Text style={styles.syncBadgeText}>
-                    {visit.synced ? 'Synced' : 'Pending'}
-                  </Text>
-                </View>
-              </View>
-              
-              <Text style={styles.outcome}>
-                {OUTCOME_LABELS[visit.outcome_code] || visit.outcome_code}
-              </Text>
-              
-              {visit.product_recommended && (
-                <Text style={styles.product}>Product: {visit.product_recommended}</Text>
-              )}
-              
-              {visit.notes && (
-                <Text style={styles.notes}>Notes: {visit.notes}</Text>
-              )}
-              
-              <Text style={styles.timestamp}>
-                {new Date(visit.visit_timestamp).toLocaleString()}
-              </Text>
-            </View>
-          ))
+          visits.map(v => <VisitCard key={v.queue_id} visit={v} />)
         )}
       </ScrollView>
     </SafeAreaView>
@@ -105,23 +175,45 @@ export default function VisitHistoryScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f0f4f8' },
-  header: { backgroundColor: '#1a5276', padding: 20, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  headerTitle: { color: '#fff', fontSize: 22, fontWeight: 'bold' },
-  subtitle: { color: '#aed6f1', fontSize: 14 },
-  statusBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, backgroundColor: '#fff' },
-  statusText: { fontSize: 14, color: '#666' },
-  syncButton: { backgroundColor: '#1a5276', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 },
-  syncButtonText: { color: '#fff', fontWeight: 'bold', fontSize: 14 },
-  list: { padding: 16 },
-  emptyText: { textAlign: 'center', color: '#888', marginTop: 40, fontSize: 16 },
-  card: { backgroundColor: '#fff', borderRadius: 12, padding: 16, marginBottom: 12, elevation: 2 },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  retailerId: { fontSize: 16, fontWeight: 'bold', color: '#1a5276' },
-  syncBadge: { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4 },
-  syncBadgeText: { color: '#fff', fontSize: 11, fontWeight: 'bold' },
-  outcome: { fontSize: 14, color: '#333', marginBottom: 4 },
-  product: { fontSize: 13, color: '#666', marginBottom: 4 },
-  notes: { fontSize: 13, color: '#666', fontStyle: 'italic', marginBottom: 4 },
-  timestamp: { fontSize: 11, color: '#999', marginTop: 8 },
+  container:      { flex: 1, backgroundColor: AppColors.bg },
+
+  header:         { backgroundColor: AppColors.primary, paddingHorizontal: 20, paddingTop: 18, paddingBottom: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  headerEyebrow:  { color: '#a5d6a7', fontSize: 11, fontWeight: '600', letterSpacing: 1.2, textTransform: 'uppercase' },
+  headerTitle:    { color: AppColors.white, fontSize: 24, fontWeight: '800', marginTop: 2 },
+  headerRep:      { color: '#a5d6a7', fontSize: 12, fontWeight: '600', marginTop: 4 },
+  onlinePill:     { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, marginTop: 4 },
+  onlineDot:      { width: 7, height: 7, borderRadius: 4, marginRight: 5 },
+  onlineText:     { fontSize: 12, fontWeight: '700' },
+
+  statsBar:       { flexDirection: 'row', alignItems: 'center', backgroundColor: AppColors.white, paddingVertical: 12, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: AppColors.border },
+  statItem:       { flex: 1, alignItems: 'center' },
+  statNum:        { fontSize: 20, fontWeight: '800', color: AppColors.textPrimary },
+  statLabel:      { fontSize: 10, color: AppColors.textMuted, fontWeight: '600', marginTop: 2 },
+  statDivider:    { width: 1, height: 32, backgroundColor: AppColors.border },
+  syncBtn:        { backgroundColor: AppColors.primaryPale, paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, marginLeft: 8 },
+  syncBtnText:    { color: AppColors.primaryMid, fontWeight: '700', fontSize: 12 },
+
+  list:           { flex: 1, paddingHorizontal: 16, paddingTop: 4 },
+  sectionLabel:   { fontSize: 12, fontWeight: '700', color: AppColors.textMuted, letterSpacing: 0.6, textTransform: 'uppercase', marginTop: 12, marginBottom: 8 },
+
+  card:           { flexDirection: 'row', backgroundColor: AppColors.white, borderRadius: 14, marginBottom: 10, overflow: 'hidden' },
+  cardAccent:     { width: 5 },
+  cardBody:       { flex: 1, padding: 14 },
+  cardTop:        { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
+  retailerId:     { fontSize: 15, fontWeight: '700', color: AppColors.textPrimary, flex: 1, marginRight: 8 },
+  syncBadge:      { borderRadius: 20, paddingHorizontal: 10, paddingVertical: 3 },
+  syncBadgeText:  { fontSize: 11, fontWeight: '700' },
+  outcomeRow:     { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 },
+  outcomeIcon:    { fontSize: 14 },
+  outcomeLabel:   { fontSize: 13, fontWeight: '600' },
+  tagRow:         { flexDirection: 'row', marginBottom: 6 },
+  tag:            { backgroundColor: AppColors.primaryPale, borderRadius: 20, paddingHorizontal: 10, paddingVertical: 3 },
+  tagText:        { fontSize: 12, color: AppColors.primaryMid, fontWeight: '600' },
+  notes:          { fontSize: 12, color: AppColors.textMuted, fontStyle: 'italic', marginBottom: 6 },
+  timestamp:      { fontSize: 11, color: AppColors.textMuted },
+
+  emptyBox:       { alignItems: 'center', paddingVertical: 60 },
+  emptyIcon:      { fontSize: 48, marginBottom: 12 },
+  emptyText:      { fontSize: 16, fontWeight: '700', color: AppColors.textSecondary },
+  emptyHint:      { fontSize: 13, color: AppColors.textMuted, marginTop: 4 },
 });

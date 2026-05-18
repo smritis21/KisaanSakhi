@@ -31,7 +31,7 @@ def get_opportunity(
     if result.get('shap_reasons') and isinstance(result['shap_reasons'], str):
         try:
             result['shap_reasons'] = json.loads(result['shap_reasons'])
-        except Exception:
+        except Exception as e:
             pass
     return result
 
