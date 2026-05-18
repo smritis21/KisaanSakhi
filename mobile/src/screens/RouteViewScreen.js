@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, SafeAreaView,
-  TouchableOpacity, ActivityIndicator, RefreshControl,
+  TouchableOpacity, ActivityIndicator, RefreshControl, Linking, Alert, Pressable,
 } from 'react-native';
 import { useNetInfo } from '@react-native-community/netinfo';
 import { getPriorityList } from '../services/dbService';
@@ -9,6 +9,24 @@ import { syncPendingVisits, pullDeltaScores } from '../services/syncService';
 import { AppColors, Shadow } from '../../constants/theme';
 
 const REP_ID = 'REP_0016';
+
+function openMaps(tehsil) {
+  const query = encodeURIComponent(`${tehsil}, India`);
+  Alert.alert(
+    'Navigate to ' + tehsil,
+    'Open in Google Maps?',
+    [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Open Maps',
+        onPress: () => {
+          const url = `https://maps.google.com/maps?q=${query}`;
+          Linking.openURL(url).catch(() => Alert.alert('Error', 'Could not open maps.'));
+        },
+      },
+    ]
+  );
+}
 
 function PriorityDot({ priority }) {
   const color = priority <= 1 ? AppColors.danger : priority <= 2 ? AppColors.warning : AppColors.success;
@@ -110,6 +128,7 @@ export default function RouteViewScreen() {
       <ScrollView
         style={styles.content}
         contentContainerStyle={{ paddingBottom: 24 }}
+        disableScrollViewPanResponder
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[AppColors.primaryMid]} />}
       >
         {route.length === 0 ? (
@@ -121,7 +140,6 @@ export default function RouteViewScreen() {
         ) : (
           route.map((stop, index) => (
             <View key={stop.tehsil} style={[styles.stopCard, Shadow.md]}>
-              {/* Stop header */}
               <View style={styles.stopHeader}>
                 <View style={[styles.stopBadge, { backgroundColor: stop.topPriority <= 1 ? AppColors.danger : stop.topPriority <= 2 ? AppColors.warning : AppColors.primaryMid }]}>
                   <Text style={styles.stopBadgeText}>{index + 1}</Text>
@@ -132,10 +150,18 @@ export default function RouteViewScreen() {
                     {stop.count} retailer{stop.count > 1 ? 's' : ''} · avg {Math.round(stop.avgScore * 100)}% score
                   </Text>
                 </View>
-                <TouchableOpacity style={styles.navBtn} activeOpacity={0.8}>
-                  <Text style={styles.navBtnText}>Navigate →</Text>
-                </TouchableOpacity>
               </View>
+
+              <TouchableOpacity
+                style={styles.navBtn}
+                onPress={() => {
+                  console.log('[Route] Navigate pressed:', stop.tehsil);
+                  openMaps(stop.tehsil);
+                }}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.navBtnText}>🗺️ Navigate to {stop.tehsil}</Text>
+              </TouchableOpacity>
 
               {/* Retailer rows */}
               <View style={styles.retailerList}>
@@ -192,15 +218,15 @@ const styles = StyleSheet.create({
 
   content:        { flex: 1, padding: 16 },
 
-  stopCard:       { backgroundColor: AppColors.white, borderRadius: 16, marginBottom: 14, overflow: 'hidden' },
+  stopCard:       { backgroundColor: AppColors.white, borderRadius: 16, marginBottom: 14 },
   stopHeader:     { flexDirection: 'row', alignItems: 'center', padding: 14, backgroundColor: AppColors.primaryPale },
   stopBadge:      { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
   stopBadgeText:  { color: AppColors.white, fontWeight: '900', fontSize: 16 },
   stopInfo:       { flex: 1 },
   stopTehsil:     { fontSize: 16, fontWeight: '800', color: AppColors.primary },
   stopMeta:       { fontSize: 11, color: AppColors.textMuted, marginTop: 2 },
-  navBtn:         { backgroundColor: AppColors.primaryMid, paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20 },
-  navBtnText:     { color: AppColors.white, fontSize: 12, fontWeight: '700' },
+  navBtn:         { backgroundColor: AppColors.primaryMid, margin: 12, marginTop: 0, borderRadius: 10, padding: 12, alignItems: 'center' },
+  navBtnText:     { color: AppColors.white, fontSize: 13, fontWeight: '700' },
 
   retailerList:   { paddingHorizontal: 14, paddingVertical: 8 },
   retailerRow:    { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, gap: 8 },
