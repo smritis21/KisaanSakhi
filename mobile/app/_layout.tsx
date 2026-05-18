@@ -1,24 +1,34 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import { DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { Platform, View } from 'react-native';
+import Constants from 'expo-constants';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import 'react-native-reanimated';
-
-import { useColorScheme } from '@/hooks/use-color-scheme';
 
 export const unstable_settings = {
   anchor: '(tabs)',
 };
 
-export default function RootLayout() {
-  const colorScheme = useColorScheme();
+const AgriTheme = {
+  ...DefaultTheme,
+  colors: { ...DefaultTheme.colors, background: '#f1f5f1' },
+};
 
+export default function RootLayout() {
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-      </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+    <SafeAreaProvider>
+      <ThemeProvider value={AgriTheme}>
+        {Platform.OS === 'android' && (
+          <View style={{ height: Constants.statusBarHeight, backgroundColor: '#1b5e20' }} />
+        )}
+        <Stack>
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="VisitLoggerScreen" options={{ headerShown: false }} />
+          <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+        </Stack>
+        <StatusBar style="light" backgroundColor="#1b5e20" translucent={false} />
+      </ThemeProvider>
+    </SafeAreaProvider>
   );
 }

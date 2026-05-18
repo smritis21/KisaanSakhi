@@ -1,116 +1,161 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, StyleSheet, SafeAreaView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  View, Text, ScrollView, StyleSheet, SafeAreaView,
+  TouchableOpacity, ActivityIndicator, RefreshControl,
+} from 'react-native';
 import { useNetInfo } from '@react-native-community/netinfo';
-import { getPriorityList, getLastSyncTime } from '../services/dbService';
+import { getPriorityList } from '../services/dbService';
+import { syncPendingVisits, pullDeltaScores } from '../services/syncService';
+import { AppColors, Shadow } from '../../constants/theme';
 
 const REP_ID = 'REP_0016';
+
+function PriorityDot({ priority }) {
+  const color = priority <= 1 ? AppColors.danger : priority <= 2 ? AppColors.warning : AppColors.success;
+  return <View style={[styles.dot, { backgroundColor: color }]} />;
+}
 
 export default function RouteViewScreen() {
   const netInfo = useNetInfo();
   const [route, setRoute] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    loadRoute();
-  }, []);
-
-  async function loadRoute() {
-    setLoading(true);
+  const loadRoute = useCallback(async () => {
     try {
-      const retailers = await getPriorityList(REP_ID, new Date().toISOString().split('T')[0]);
-      
-      const tehsilGroups = {};
+      const today = new Date().toISOString().split('T')[0];
+      if (netInfo.isConnected) {
+        await syncPendingVisits();
+        await pullDeltaScores(REP_ID, today);
+      }
+      const retailers = await getPriorityList(REP_ID, today);
+
+      const groups = {};
       retailers.forEach(r => {
-        if (!tehsilGroups[r.tehsil]) {
-          tehsilGroups[r.tehsil] = [];
-        }
-        tehsilGroups[r.tehsil].push(r);
+        if (!groups[r.tehsil]) groups[r.tehsil] = [];
+        groups[r.tehsil].push(r);
       });
 
-      const orderedRoute = Object.entries(tehsilGroups)
-        .sort((a, b) => {
-          const aTop = a[1][0]?.priority || 99;
-          const bTop = b[1][0]?.priority || 99;
-          return aTop - bTop;
-        })
-        .map(([tehsil, retailers]) => ({
+      const ordered = Object.entries(groups)
+        .sort((a, b) => (a[1][0]?.priority || 99) - (b[1][0]?.priority || 99))
+        .map(([tehsil, list]) => ({
           tehsil,
-          count: retailers.length,
-          retailers: retailers.slice(0, 3),
+          count: list.length,
+          topPriority: list[0]?.priority || 4,
+          avgScore: list.reduce((s, r) => s + (r.opportunity_score || 0), 0) / list.length,
+          retailers: list.slice(0, 4),
         }));
 
-      setRoute(orderedRoute);
+      setRoute(ordered);
     } catch (e) {
-      console.log('Route load error:', e.message);
+      console.log('Route error:', e.message);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
-  }
+  }, [netInfo.isConnected]);
 
-  if (loading) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color="#1a5276" />
-          <Text style={styles.loadingText}>Loading route...</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
+  useEffect(() => { loadRoute(); }, []);
+
+  const onRefresh = useCallback(async () => { setRefreshing(true); await loadRoute(); }, [loadRoute]);
+
+  const totalRetailers = route.reduce((s, t) => s + t.count, 0);
+
+  if (loading) return (
+    <SafeAreaView style={styles.container}>
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color={AppColors.primaryMid} />
+        <Text style={styles.loadingText}>Building your route…</Text>
+      </View>
+    </SafeAreaView>
+  );
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>📍 Today's Route</Text>
-        <Text style={styles.headerSubtitle}>
-          {netInfo.isConnected ? '🟢 Online' : '🔴 Offline'}
-        </Text>
+        <View>
+          <Text style={styles.headerEyebrow}>AgriPulse AI</Text>
+          <Text style={styles.headerTitle}>Today's Route</Text>
+          <Text style={styles.headerRep}>👤 {REP_ID}</Text>
+        </View>
+        <View style={[styles.onlinePill, { backgroundColor: netInfo.isConnected ? '#a5d6a7' : '#ef9a9a' }]}>
+          <View style={[styles.onlineDot, { backgroundColor: netInfo.isConnected ? AppColors.success : AppColors.danger }]} />
+          <Text style={[styles.onlineText, { color: netInfo.isConnected ? AppColors.success : AppColors.danger }]}>
+            {netInfo.isConnected ? 'Online' : 'Offline'}
+          </Text>
+        </View>
       </View>
 
+      {/* Summary bar */}
       <View style={styles.summaryBar}>
-        <Text style={styles.summaryText}>
-          {route.length} stops • {route.reduce((sum, t) => sum + t.count, 0)} retailers
-        </Text>
+        <View style={styles.summaryItem}>
+          <Text style={styles.summaryNum}>{route.length}</Text>
+          <Text style={styles.summaryLabel}>Stops</Text>
+        </View>
+        <View style={styles.summaryDivider} />
+        <View style={styles.summaryItem}>
+          <Text style={styles.summaryNum}>{totalRetailers}</Text>
+          <Text style={styles.summaryLabel}>Retailers</Text>
+        </View>
+        <View style={styles.summaryDivider} />
+        <View style={styles.summaryItem}>
+          <Text style={[styles.summaryNum, { color: AppColors.danger }]}>
+            {route.filter(t => t.topPriority <= 1).length}
+          </Text>
+          <Text style={styles.summaryLabel}>Urgent</Text>
+        </View>
       </View>
 
-      <ScrollView style={styles.content}>
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={{ paddingBottom: 24 }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[AppColors.primaryMid]} />}
+      >
         {route.length === 0 ? (
-          <View style={styles.emptyState}>
+          <View style={styles.emptyBox}>
+            <Text style={styles.emptyIcon}>🗺️</Text>
             <Text style={styles.emptyText}>No route assigned</Text>
-            <Text style={styles.emptySubtext}>Sync to get your priority list</Text>
+            <Text style={styles.emptyHint}>Sync to get your priority list</Text>
           </View>
         ) : (
           route.map((stop, index) => (
-            <View key={stop.tehsil} style={styles.stopCard}>
+            <View key={stop.tehsil} style={[styles.stopCard, Shadow.md]}>
+              {/* Stop header */}
               <View style={styles.stopHeader}>
-                <View style={styles.stopNumber}>
-                  <Text style={styles.stopNumberText}>{index + 1}</Text>
+                <View style={[styles.stopBadge, { backgroundColor: stop.topPriority <= 1 ? AppColors.danger : stop.topPriority <= 2 ? AppColors.warning : AppColors.primaryMid }]}>
+                  <Text style={styles.stopBadgeText}>{index + 1}</Text>
                 </View>
                 <View style={styles.stopInfo}>
                   <Text style={styles.stopTehsil}>{stop.tehsil}</Text>
-                  <Text style={styles.stopCount}>{stop.count} retailer{stop.count > 1 ? 's' : ''}</Text>
+                  <Text style={styles.stopMeta}>
+                    {stop.count} retailer{stop.count > 1 ? 's' : ''} · avg {Math.round(stop.avgScore * 100)}% score
+                  </Text>
                 </View>
-                <TouchableOpacity style={styles.navigateButton}>
-                  <Text style={styles.navigateText}>Navigate</Text>
+                <TouchableOpacity style={styles.navBtn} activeOpacity={0.8}>
+                  <Text style={styles.navBtnText}>Navigate →</Text>
                 </TouchableOpacity>
               </View>
 
+              {/* Retailer rows */}
               <View style={styles.retailerList}>
-                {stop.retailers.map((r) => (
-                  <View key={r.retailer_id} style={styles.retailerItem}>
-                    <View style={styles.retailerInfo}>
-                      <Text style={styles.retailerId}>{r.retailer_id}</Text>
-                      <Text style={styles.retailerScore}>
-                        Score: {(r.opportunity_score * 100).toFixed(0)}%
-                      </Text>
-                    </View>
-                    <View style={[styles.priorityBadge, {
-                      backgroundColor: r.priority <= 1 ? '#F44336' : r.priority <= 2 ? '#FF9800' : '#4CAF50'
+                {stop.retailers.map((r, i) => (
+                  <View key={r.retailer_id} style={[styles.retailerRow, i < stop.retailers.length - 1 && styles.retailerRowBorder]}>
+                    <PriorityDot priority={r.priority} />
+                    <Text style={styles.retailerId} numberOfLines={1}>{r.retailer_id}</Text>
+                    <Text style={styles.retailerScore}>{Math.round((r.opportunity_score || 0) * 100)}%</Text>
+                    <View style={[styles.pBadge, {
+                      backgroundColor: r.priority <= 1 ? AppColors.dangerLight : r.priority <= 2 ? AppColors.warningLight : AppColors.successLight,
                     }]}>
-                      <Text style={styles.priorityText}>P{r.priority}</Text>
+                      <Text style={[styles.pBadgeText, {
+                        color: r.priority <= 1 ? AppColors.danger : r.priority <= 2 ? AppColors.warning : AppColors.success,
+                      }]}>P{r.priority}</Text>
                     </View>
                   </View>
                 ))}
+                {stop.count > 4 && (
+                  <Text style={styles.moreText}>+{stop.count - 4} more retailers</Text>
+                )}
               </View>
             </View>
           ))
@@ -118,8 +163,8 @@ export default function RouteViewScreen() {
       </ScrollView>
 
       <View style={styles.footer}>
-        <TouchableOpacity style={styles.syncButton} onPress={loadRoute}>
-          <Text style={styles.syncButtonText}>🔄 Refresh Route</Text>
+        <TouchableOpacity style={styles.refreshBtn} onPress={loadRoute} activeOpacity={0.85}>
+          <Text style={styles.refreshBtnText}>🔄  Refresh Route</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -127,41 +172,52 @@ export default function RouteViewScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f0f4f8' },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  loadingText: { marginTop: 12, color: '#666' },
-  header: {
-    backgroundColor: '#1a5276',
-    padding: 20,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  headerTitle: { color: '#fff', fontSize: 20, fontWeight: 'bold' },
-  headerSubtitle: { color: '#aed6f1', fontSize: 14 },
-  summaryBar: { backgroundColor: '#fff', padding: 12, borderBottomWidth: 1, borderBottomColor: '#e0e0e0' },
-  summaryText: { color: '#333', fontSize: 14, fontWeight: '600' },
-  content: { flex: 1, padding: 16 },
-  emptyState: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 60 },
-  emptyText: { fontSize: 18, fontWeight: '600', color: '#333' },
-  emptySubtext: { color: '#666', marginTop: 8 },
-  stopCard: { backgroundColor: '#fff', borderRadius: 12, marginBottom: 16, overflow: 'hidden', elevation: 2 },
-  stopHeader: { flexDirection: 'row', alignItems: 'center', padding: 16, backgroundColor: '#f8f9fa' },
-  stopNumber: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#1a5276', justifyContent: 'center', alignItems: 'center' },
-  stopNumberText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
-  stopInfo: { flex: 1, marginLeft: 12 },
-  stopTehsil: { fontSize: 16, fontWeight: '600', color: '#1a5276' },
-  stopCount: { fontSize: 12, color: '#666', marginTop: 2 },
-  navigateButton: { backgroundColor: '#1a5276', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 6 },
-  navigateText: { color: '#fff', fontSize: 12, fontWeight: '600' },
-  retailerList: { padding: 12 },
-  retailerItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
-  retailerInfo: { flex: 1 },
-  retailerId: { fontSize: 14, fontWeight: '500', color: '#333' },
-  retailerScore: { fontSize: 12, color: '#666', marginTop: 2 },
-  priorityBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 4 },
-  priorityText: { color: '#fff', fontSize: 11, fontWeight: 'bold' },
-  footer: { padding: 16, backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#e0e0e0' },
-  syncButton: { backgroundColor: '#1a5276', padding: 14, borderRadius: 8, alignItems: 'center' },
-  syncButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  container:      { flex: 1, backgroundColor: AppColors.bg },
+  center:         { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  loadingText:    { marginTop: 12, color: AppColors.textMuted, fontSize: 14 },
+
+  header:         { backgroundColor: AppColors.primary, paddingHorizontal: 20, paddingTop: 18, paddingBottom: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  headerEyebrow:  { color: '#a5d6a7', fontSize: 11, fontWeight: '600', letterSpacing: 1.2, textTransform: 'uppercase' },
+  headerTitle:    { color: AppColors.white, fontSize: 24, fontWeight: '800', marginTop: 2 },
+  headerRep:      { color: '#a5d6a7', fontSize: 12, fontWeight: '600', marginTop: 4 },
+  onlinePill:     { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, marginTop: 4 },
+  onlineDot:      { width: 7, height: 7, borderRadius: 4, marginRight: 5 },
+  onlineText:     { fontSize: 12, fontWeight: '700' },
+
+  summaryBar:     { flexDirection: 'row', backgroundColor: AppColors.white, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: AppColors.border },
+  summaryItem:    { flex: 1, alignItems: 'center' },
+  summaryNum:     { fontSize: 22, fontWeight: '800', color: AppColors.textPrimary },
+  summaryLabel:   { fontSize: 11, color: AppColors.textMuted, fontWeight: '600', marginTop: 2 },
+  summaryDivider: { width: 1, backgroundColor: AppColors.border },
+
+  content:        { flex: 1, padding: 16 },
+
+  stopCard:       { backgroundColor: AppColors.white, borderRadius: 16, marginBottom: 14, overflow: 'hidden' },
+  stopHeader:     { flexDirection: 'row', alignItems: 'center', padding: 14, backgroundColor: AppColors.primaryPale },
+  stopBadge:      { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
+  stopBadgeText:  { color: AppColors.white, fontWeight: '900', fontSize: 16 },
+  stopInfo:       { flex: 1 },
+  stopTehsil:     { fontSize: 16, fontWeight: '800', color: AppColors.primary },
+  stopMeta:       { fontSize: 11, color: AppColors.textMuted, marginTop: 2 },
+  navBtn:         { backgroundColor: AppColors.primaryMid, paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20 },
+  navBtnText:     { color: AppColors.white, fontSize: 12, fontWeight: '700' },
+
+  retailerList:   { paddingHorizontal: 14, paddingVertical: 8 },
+  retailerRow:    { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, gap: 8 },
+  retailerRowBorder: { borderBottomWidth: 1, borderBottomColor: AppColors.border },
+  dot:            { width: 8, height: 8, borderRadius: 4 },
+  retailerId:     { flex: 1, fontSize: 13, fontWeight: '600', color: AppColors.textPrimary },
+  retailerScore:  { fontSize: 13, fontWeight: '700', color: AppColors.textSecondary, marginRight: 4 },
+  pBadge:         { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
+  pBadgeText:     { fontSize: 11, fontWeight: '800' },
+  moreText:       { fontSize: 12, color: AppColors.textMuted, textAlign: 'center', paddingVertical: 8, fontStyle: 'italic' },
+
+  emptyBox:       { alignItems: 'center', paddingVertical: 60 },
+  emptyIcon:      { fontSize: 48, marginBottom: 12 },
+  emptyText:      { fontSize: 16, fontWeight: '700', color: AppColors.textSecondary },
+  emptyHint:      { fontSize: 13, color: AppColors.textMuted, marginTop: 4 },
+
+  footer:         { padding: 16, backgroundColor: AppColors.white, borderTopWidth: 1, borderTopColor: AppColors.border },
+  refreshBtn:     { backgroundColor: AppColors.primary, padding: 14, borderRadius: 12, alignItems: 'center' },
+  refreshBtnText: { color: AppColors.white, fontSize: 15, fontWeight: '800' },
 });

@@ -1,22 +1,23 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { AppColors, Shadow } from '../../constants/theme';
 
 export default function SyncStatusBar({ lastSync, pendingCount, onForceSync }) {
-  const isAllSynced = pendingCount === 0;
+  const allSynced = pendingCount === 0;
 
   return (
-    <View style={[styles.container, { backgroundColor: isAllSynced ? '#1e8449' : '#d35400' }]}>
-      <View style={styles.left}>
-        <Text style={styles.statusIcon}>{isAllSynced ? '✅' : '⏳'}</Text>
-        <View>
-          <Text style={styles.statusText}>
-            {isAllSynced ? 'All Synced' : `${pendingCount} Pending`}
-          </Text>
-          <Text style={styles.lastSyncText}>Last sync: {lastSync}</Text>
-        </View>
+    <View style={[styles.container, Shadow.sm]}>
+      <View style={[styles.indicator, { backgroundColor: allSynced ? AppColors.success : AppColors.warning }]} />
+      <View style={styles.textGroup}>
+        <Text style={styles.status}>
+          {allSynced ? '✓ All synced' : `${pendingCount} pending upload${pendingCount > 1 ? 's' : ''}`}
+        </Text>
+        {lastSync ? (
+          <Text style={styles.sub}>Last sync: {lastSync}</Text>
+        ) : null}
       </View>
-      <TouchableOpacity style={styles.syncButton} onPress={onForceSync}>
-        <Text style={styles.syncButtonText}>Force Sync</Text>
+      <TouchableOpacity style={styles.btn} onPress={onForceSync} activeOpacity={0.75}>
+        <Text style={styles.btnText}>Sync now</Text>
       </TouchableOpacity>
     </View>
   );
@@ -25,22 +26,30 @@ export default function SyncStatusBar({ lastSync, pendingCount, onForceSync }) {
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 12,
+    backgroundColor: AppColors.white,
     marginHorizontal: 16,
     marginVertical: 8,
-    borderRadius: 10,
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderWidth: 1,
+    borderColor: AppColors.border,
   },
-  left: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  statusIcon: { fontSize: 20 },
-  statusText: { color: '#fff', fontWeight: 'bold', fontSize: 14 },
-  lastSyncText: { color: '#f0f0f0', fontSize: 11, marginTop: 2 },
-  syncButton: {
-    backgroundColor: 'rgba(255,255,255,0.25)',
-    paddingHorizontal: 12,
+  indicator: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 10,
+  },
+  textGroup: { flex: 1 },
+  status: { fontSize: 13, fontWeight: '700', color: AppColors.textPrimary },
+  sub: { fontSize: 11, color: AppColors.textMuted, marginTop: 1 },
+  btn: {
+    backgroundColor: AppColors.primaryPale,
+    paddingHorizontal: 14,
     paddingVertical: 6,
-    borderRadius: 8,
+    borderRadius: 20,
   },
-  syncButtonText: { color: '#fff', fontWeight: 'bold', fontSize: 13 },
+  btnText: { color: AppColors.primaryMid, fontWeight: '700', fontSize: 12 },
 });
