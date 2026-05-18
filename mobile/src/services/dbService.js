@@ -1,14 +1,14 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as SecureStore from 'expo-secure-store';
+
+const API_BASE_URL = 'http://192.168.1.24:8000/api/v1';
+const AUTH_TOKEN = 'agripulse-hackathon-secret-key-2026';
 
 let visitQueue = [];
 let retailers = [];
 let lastSyncTime = null;
 
 async function getApiConfig() {
-  const baseUrl = await SecureStore.getItemAsync('api_base_url') || 'http://192.168.1.24:8000/api/v1';
-  const token = await SecureStore.getItemAsync('auth_token') || 'agripulse-hackathon-secret-key-2026';
-  return { baseUrl, token };
+  return { baseUrl: API_BASE_URL, token: AUTH_TOKEN };
 }
 
 export async function initDb() {

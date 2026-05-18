@@ -3,7 +3,7 @@ import { View, Text, ScrollView, StyleSheet, SafeAreaView, TouchableOpacity, Act
 import { useNetInfo } from '@react-native-community/netinfo';
 import { getPriorityList, getLastSyncTime } from '../services/dbService';
 
-const REP_ID = 'REP_0001';
+const REP_ID = 'REP_0016';
 
 export default function RouteViewScreen() {
   const netInfo = useNetInfo();

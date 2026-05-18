@@ -137,7 +137,10 @@ if __name__ == '__main__':
     else:
         result = run_daily_scoring(args.date)
     
-    print(f'\nTop 5 priority retailers:')
-    top5 = result.sort_values('opportunity_score', ascending=False).head(5)
-    for _, r in top5.iterrows():
-        print(f"  {r['retailer_id']} | {r.get('district', '?')} | score={r['opportunity_score']:.3f} | {r.get('action_label', '?')[:40]}")
+    print(f'\nTop 3 retailers per rep:')
+    all_reps = result['rep_id'].dropna().unique()
+    for rep in sorted(all_reps):
+        rep_data = result[result['rep_id'] == rep].sort_values('opportunity_score', ascending=False).head(3)
+        print(f'\n  {rep}:')
+        for _, r in rep_data.iterrows():
+            print(f"    {r['retailer_id']} | {r.get('district', '?')} | score={r['opportunity_score']:.3f} | {r.get('action_label', '?')[:40]}")

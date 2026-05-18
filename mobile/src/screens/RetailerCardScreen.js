@@ -88,6 +88,8 @@ function RetailerCard({ retailer, onLogVisit }) {
   );
 }
 
+const REP_ID = 'REP_0016';
+
 export default function RetailerCardScreen() {
   const router = useRouter();
   const netInfo = useNetInfo();
@@ -100,7 +102,7 @@ export default function RetailerCardScreen() {
     async function init() {
       await initDb();
       if (netInfo.isConnected) {
-        await pullDeltaScores('REP_0001', new Date().toISOString().split('T')[0]);
+        await pullDeltaScores('REP_0016', new Date().toISOString().split('T')[0]);
       }
       await loadData();
     }
@@ -110,14 +112,14 @@ export default function RetailerCardScreen() {
   useEffect(() => {
     if (netInfo.isConnected) {
       syncPendingVisits();
-      pullDeltaScores('REP_0001', new Date().toISOString().split('T')[0]).then(loadData);
+      pullDeltaScores('REP_0016', new Date().toISOString().split('T')[0]).then(loadData);
     }
   }, [netInfo]);
 
   async function loadData() {
     const today = new Date().toISOString().split('T')[0];
-    const list = await getPriorityList('REP_0001', today);
-    setRetailers(list.length > 0 ? list : getDummyRetailers());
+    const list = await getPriorityList('REP_0016', today);
+    setRetailers(list.length > 0 ? list : []);
     setPendingCount(await getPendingCount());
     setLastSync(new Date().toLocaleTimeString());
   }
@@ -127,7 +129,7 @@ export default function RetailerCardScreen() {
     const online = await checkNetworkStatus();
     if (online) {
       await syncPendingVisits();
-      await pullDeltaScores('REP_0001', new Date().toISOString().split('T')[0]);
+      await pullDeltaScores('REP_0016', new Date().toISOString().split('T')[0]);
     }
     await loadData();
     setRefreshing(false);

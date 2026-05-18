@@ -85,7 +85,7 @@ export default function DashboardScreen() {
       const { baseUrl, token } = await getApiConfig();
       const scoreDate = new Date().toISOString().split('T')[0];
       
-      const response = await fetch(`${baseUrl}/reps/${currentRepId}/priority-list?date=${scoreDate}`, {
+      const response = await fetch(`${baseUrl}/reps/${currentRepId}/priority-list?score_date=${scoreDate}`, {
         headers: { authorization: `Bearer ${token}` },
       });
       
@@ -94,7 +94,11 @@ export default function DashboardScreen() {
       }
       
       const data = await response.json();
-      setRetailers(data.retailers || []);
+      const retailerList = data.retailers || [];
+      setRetailers(retailerList);
+      // Save to AsyncStorage for offline use
+      const { saveDeltaRecords } = await import('../services/dbService');
+      if (retailerList.length > 0) await saveDeltaRecords(retailerList);
       setLastSync(new Date().toLocaleTimeString());
       setError(null);
       return true;

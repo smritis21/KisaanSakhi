@@ -114,9 +114,14 @@ def compute_whatsapp_features(wa, as_of_date):
 
 def build_feature_matrix(as_of_date=None):
     if as_of_date is None:
-        as_of_date = pd.Timestamp('2026-03-31')
+        as_of_date = pd.Timestamp.today().normalize()
     else:
         as_of_date = pd.Timestamp(as_of_date)
+
+    # For POS/inventory features, use last available data date
+    # For visit features, use today so new visits are reflected
+    pos_as_of = min(as_of_date, pd.Timestamp('2026-03-31'))
+    inv_as_of = min(as_of_date, pd.Timestamp('2026-03-31'))
 
     print(f'Building feature matrix as of {as_of_date.date()}')
 
@@ -133,13 +138,13 @@ def build_feature_matrix(as_of_date=None):
     visits = visits_raw.merge(retailers[['retailer_id', 'territory_id', 'tehsil']], left_on=['territory_id', 'visit_tehsil'], right_on=['territory_id', 'tehsil'], how='left').dropna(subset=['retailer_id'])
 
     print('Computing POS features...')
-    pos_feats = compute_pos_features(pos, as_of_date)
+    pos_feats = compute_pos_features(pos, pos_as_of)
 
     print('Computing visit features...')
     vis_feats = compute_visit_features(visits, as_of_date)
 
     print('Computing inventory features...')
-    inv_feats = compute_inventory_features(inv, as_of_date)
+    inv_feats = compute_inventory_features(inv, inv_as_of)
 
     print('Computing WhatsApp features...')
     wa_feats = compute_whatsapp_features(wa, as_of_date)

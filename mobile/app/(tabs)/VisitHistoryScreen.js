@@ -1,4 +1,3 @@
-import { useLocalSearchParams } from 'expo-router';
 import { useState, useEffect } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, SafeAreaView, TouchableOpacity, Alert,
@@ -22,9 +21,14 @@ export default function VisitHistoryScreen() {
   useEffect(() => {
     loadVisits();
     
-    const interval = setInterval(() => {
+    const interval = setInterval(async () => {
+      const pending = await getPendingCount();
+      if (pending > 0) {
+        const online = await checkNetworkStatus();
+        if (online) await syncPendingVisits();
+      }
       loadVisits();
-    }, 3000);
+    }, 5000);
     
     return () => clearInterval(interval);
   }, []);
@@ -40,10 +44,8 @@ export default function VisitHistoryScreen() {
     const result = await syncPendingVisits();
     if (result.success) {
       Alert.alert('Synced', `${result.synced} visits synced to server`);
-      loadVisits();
-    } else {
-      Alert.alert('Error', result.reason || 'Failed to sync');
     }
+    loadVisits();
   }
 
   return (

@@ -1,21 +1,11 @@
-import { useNetInfo } from '@react-native-community/netinfo';
 import * as Network from 'expo-network';
-import * as SecureStore from 'expo-secure-store';
 import { getPendingVisits, markVisitsSynced, getPendingCount, setMeta, getMeta, saveDeltaRecords, getPriorityList, syncPendingVisitsToBackend } from './dbService';
 import { getApiConfig, getCurrentRepId, getConfig } from './configService';
 
-// Get API config from secure storage or use dynamic config
 async function getApiEndpoint() {
-  try {
-    const { baseUrl } = await getApiConfig();
-    const repId = await getCurrentRepId();
-    return { baseUrl, repId };
-  } catch (error) {
-    // Fallback to stored values
-    const baseUrl = await SecureStore.getItemAsync('api_base_url') || 'http://localhost:8000/api/v1';
-    const repId = await SecureStore.getItemAsync('default_rep_id') || 'REP_0001';
-    return { baseUrl, repId };
-  }
+  const { baseUrl } = await getApiConfig();
+  const repId = await getCurrentRepId();
+  return { baseUrl, repId };
 }
 
 // Validate URL to prevent SSRF attacks
@@ -74,7 +64,9 @@ export async function queueVisit(visitData) {
 }
 
 export async function syncPendingVisits() {
-  if (isSyncing) return { success: false, reason: 'Already syncing' };
+  if (isSyncing) {
+    isSyncing = false; // force reset stuck lock
+  }
   
   const isOnline = await checkNetworkStatus();
   if (!isOnline) return { success: false, reason: 'Offline' };
@@ -84,10 +76,8 @@ export async function syncPendingVisits() {
   try {
     const result = await syncPendingVisitsToBackend();
     isSyncing = false;
-    
     const pending = await getPendingCount();
     if (pendingSyncCallback) pendingSyncCallback(pending);
-    
     return result;
   } catch (error) {
     console.error('[Sync] Visit sync error:', error);
@@ -105,7 +95,7 @@ export async function pullDeltaScores(repId = null, scoreDate = null) {
     const targetRepId = repId || configRepId;
     const targetDate = scoreDate || new Date().toISOString().split('T')[0];
     
-    const url = `${baseUrl}/reps/${targetRepId}/priority-list?date=${targetDate}`;
+    const url = `${baseUrl}/reps/${targetRepId}/priority-list?score_date=${targetDate}`;
     
     if (!isValidUrl(url)) {
       throw new Error('Invalid URL detected');
@@ -130,7 +120,7 @@ export async function pullDeltaScores(repId = null, scoreDate = null) {
     
     return { success: true, count: records.length };
   } catch (error) {
-    console.error('[Sync] Pull scores error:', error);
+    // Silently fail — offline or transient error
     return { success: false, reason: error.message };
   }
 }
