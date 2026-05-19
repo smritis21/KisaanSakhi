@@ -6,11 +6,10 @@ from dotenv import load_dotenv
 
 load_dotenv(override=False)
 
-DATABASE_URL = os.getenv('DATABASE_URL', 'postgresql://agripulse:agripulse123@localhost:5432/agripulse')
+DATABASE_URL = os.environ.get('DATABASE_URL') or os.getenv('DATABASE_URL', 'postgresql://agripulse:agripulse123@localhost:5432/agripulse')
 
-# Fix SSL for Railway internal networking
-if 'railway.internal' in DATABASE_URL and 'sslmode' not in DATABASE_URL:
-    DATABASE_URL += '?sslmode=disable'
+if 'railway.internal' in DATABASE_URL:
+    DATABASE_URL = DATABASE_URL.split('?')[0] + '?sslmode=disable'
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
