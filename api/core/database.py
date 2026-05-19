@@ -15,7 +15,7 @@ is_railway = 'rlwy.net' in base_url or 'railway.internal' in base_url
 logging.warning(f'DB connecting to: {base_url.split("@")[-1] if "@" in base_url else "local"} ssl_disabled={is_railway}')
 
 if is_railway:
-    engine = create_engine(base_url, connect_args={'sslmode': 'disable'})
+    engine = create_engine(base_url, connect_args={'sslmode': 'disable', 'gssencmode': 'disable'})
 else:
     engine = create_engine(base_url)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
