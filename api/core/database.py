@@ -4,9 +4,13 @@ from sqlalchemy.orm import sessionmaker
 import os
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(override=False)
 
 DATABASE_URL = os.getenv('DATABASE_URL', 'postgresql://agripulse:agripulse123@localhost:5432/agripulse')
+
+# Fix SSL for Railway internal networking
+if 'railway.internal' in DATABASE_URL and 'sslmode' not in DATABASE_URL:
+    DATABASE_URL += '?sslmode=disable'
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
