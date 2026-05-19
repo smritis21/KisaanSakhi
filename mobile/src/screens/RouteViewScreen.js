@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, SafeAreaView,
-  TouchableOpacity, ActivityIndicator, RefreshControl, Linking, Alert, Pressable,
+  TouchableOpacity, ActivityIndicator, RefreshControl, Linking, Alert, Pressable, Platform,
 } from 'react-native';
 import { useNetInfo } from '@react-native-community/netinfo';
 import { getPriorityList } from '../services/dbService';
@@ -12,20 +12,19 @@ const REP_ID = 'REP_0016';
 
 function openMaps(tehsil) {
   const query = encodeURIComponent(`${tehsil}, India`);
-  Alert.alert(
-    'Navigate to ' + tehsil,
-    'Open in Google Maps?',
-    [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Open Maps',
-        onPress: () => {
-          const url = `https://maps.google.com/maps?q=${query}`;
-          Linking.openURL(url).catch(() => Alert.alert('Error', 'Could not open maps.'));
-        },
-      },
-    ]
-  );
+  const url = `https://maps.google.com/maps?q=${query}`;
+  if (Platform.OS === 'web') {
+    window.open(url, '_blank');
+  } else {
+    Alert.alert(
+      'Navigate to ' + tehsil,
+      'Open in Google Maps?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Open Maps', onPress: () => Linking.openURL(url).catch(() => Alert.alert('Error', 'Could not open maps.')) },
+      ]
+    );
+  }
 }
 
 function PriorityDot({ priority }) {

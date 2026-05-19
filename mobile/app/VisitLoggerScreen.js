@@ -2,7 +2,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { useState, useEffect } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, SafeAreaView,
-  TouchableOpacity, Alert, TextInput, ActivityIndicator,
+  TouchableOpacity, Alert, TextInput, ActivityIndicator, Platform,
 } from 'react-native';
 import SyncStatusBar from '../src/components/SyncStatusBar';
 import { queueVisit, syncPendingVisits, checkNetworkStatus } from '../src/services/syncService';
@@ -28,6 +28,7 @@ export default function VisitLoggerScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
   const [isOnline, setIsOnline] = useState(true);
+  const [successMsg, setSuccessMsg] = useState('');
 
   useEffect(() => {
     if (params.retailer) {
@@ -59,9 +60,14 @@ export default function VisitLoggerScreen() {
         product_recommended: product,
         notes,
       });
-      Alert.alert('Visit Logged ✅', isOnline ? 'Saved and syncing…' : 'Saved offline. Will sync when connected.', [{
-        text: 'OK', onPress: () => { setOutcome(''); setProduct(''); setNotes(''); }
-      }]);
+      const msg = isOnline ? 'Visit saved and syncing…' : 'Saved offline. Will sync when connected.';
+      if (Platform.OS === 'web') {
+        setSuccessMsg(msg);
+        setTimeout(() => setSuccessMsg(''), 4000);
+        setOutcome(''); setProduct(''); setNotes('');
+      } else {
+        Alert.alert('Visit Logged ✅', msg, [{ text: 'OK', onPress: () => { setOutcome(''); setProduct(''); setNotes(''); } }]);
+      }
       if (isOnline) syncPendingVisits();
     } catch (err) {
       Alert.alert('Error', err.message);
@@ -92,6 +98,11 @@ export default function VisitLoggerScreen() {
           <Text style={styles.offlineText}>✈️  Offline — data will sync automatically when connected</Text>
         </View>
       )}
+      {successMsg ? (
+        <View style={styles.successBanner}>
+          <Text style={styles.successText}>✅ {successMsg}</Text>
+        </View>
+      ) : null}
 
       <ScrollView style={styles.form} contentContainerStyle={{ paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
 
@@ -203,4 +214,6 @@ const styles = StyleSheet.create({
   submitBtn:          { backgroundColor: AppColors.primary, borderRadius: 14, padding: 16, alignItems: 'center', marginTop: 24 },
   submitBtnDisabled:  { backgroundColor: AppColors.textMuted },
   submitBtnText:      { color: AppColors.white, fontWeight: '800', fontSize: 16 },
+  successBanner:      { backgroundColor: '#2e7d32', padding: 12, alignItems: 'center' },
+  successText:        { color: '#fff', fontWeight: '700', fontSize: 14 },
 });

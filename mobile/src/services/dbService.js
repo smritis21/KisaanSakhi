@@ -1,14 +1,11 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
-const API_BASE_URL = 'http://192.168.1.24:8000/api/v1';
-const AUTH_TOKEN = 'agripulse-hackathon-secret-key-2026';
-
+import { getApiConfig as getConfig } from './configService';
 let visitQueue = [];
 let retailers = [];
 let lastSyncTime = null;
 
 async function getApiConfig() {
-  return { baseUrl: API_BASE_URL, token: AUTH_TOKEN };
+  return getConfig();
 }
 
 export async function initDb() {

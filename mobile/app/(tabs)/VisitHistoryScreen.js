@@ -3,9 +3,27 @@ import {
   View, Text, ScrollView, StyleSheet, SafeAreaView,
   TouchableOpacity, Alert, RefreshControl,
 } from 'react-native';
-import { getAllVisits, getPendingCount } from '../../src/services/dbService';
+import { getPendingCount } from '../../src/services/dbService';
 import { syncPendingVisits, checkNetworkStatus } from '../../src/services/syncService';
+import { getApiConfig } from '../../src/services/configService';
 import { AppColors, Shadow } from '../../constants/theme';
+
+const REP_ID = 'REP_0016';
+
+async function fetchVisitsFromRailway() {
+  const { baseUrl, token } = await getApiConfig();
+  const res = await fetch(`${baseUrl}/sync/visits/${REP_ID}`, {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  if (!res.ok) return [];
+  const data = await res.json();
+  return (data.visits || []).map(v => ({
+    ...v,
+    queue_id: `${v.retailer_id}-${v.visit_date}`,
+    synced: 1,
+    visit_timestamp: v.visit_date,
+  }));
+}
 
 const OUTCOME_META = {
   VISIT_COMPLETE: { label: 'Visit Completed',       color: AppColors.success, icon: '✅' },
@@ -67,10 +85,13 @@ export default function VisitHistoryScreen() {
   const [refreshing, setRefreshing] = useState(false);
 
   const loadVisits = useCallback(async () => {
-    const all = await getAllVisits();
-    setVisits(all.slice().reverse()); // newest first
+    const online = await checkNetworkStatus();
+    setIsOnline(online);
+    if (online) {
+      const remote = await fetchVisitsFromRailway();
+      setVisits(remote);
+    }
     setPendingCount(await getPendingCount());
-    setIsOnline(await checkNetworkStatus());
   }, []);
 
   useEffect(() => {

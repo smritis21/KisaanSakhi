@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, SafeAreaView,
-  TouchableOpacity, Alert, TextInput, ActivityIndicator,
+  TouchableOpacity, Alert, TextInput, ActivityIndicator, Platform,
 } from 'react-native';
 import SyncStatusBar from '../components/SyncStatusBar';
 import { queueVisit, syncPendingVisits, checkNetworkStatus } from '../services/syncService';
@@ -34,6 +34,7 @@ export default function VisitLoggerScreen({ route }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
   const [isOnline, setIsOnline] = useState(true);
+  const [successMsg, setSuccessMsg] = useState('');
 
   useEffect(() => {
     console.log('[Visit] params received:', JSON.stringify(params).substring(0, 200));
@@ -91,18 +92,15 @@ export default function VisitLoggerScreen({ route }) {
         notes,
       });
 
-      Alert.alert(
-        'Visit Logged',
-        pendingCount === 0 ? 'Data saved locally. Will sync when online.' : `Queued (${pendingCount + 1} pending)`,
-        [
-          { text: 'OK', onPress: () => {
-            setOutcome('');
-            setProduct('');
-            setNotes('');
-            loadStatus();
-          }},
-        ]
-      );
+      const msg = pendingCount === 0 ? 'Visit saved! Will sync when online.' : `Visit queued (${pendingCount + 1} pending)`;
+      if (Platform.OS === 'web') {
+        setSuccessMsg(msg);
+        setTimeout(() => setSuccessMsg(''), 3000);
+        setOutcome(''); setProduct(''); setNotes('');
+        loadStatus();
+      } else {
+        Alert.alert('Visit Logged', msg, [{ text: 'OK', onPress: () => { setOutcome(''); setProduct(''); setNotes(''); loadStatus(); } }]);
+      }
 
       if (isOnline) {
         syncPendingVisits();
@@ -131,6 +129,12 @@ export default function VisitLoggerScreen({ route }) {
           <Text style={styles.offlineText}>✈️ Offline Mode - Data will sync automatically</Text>
         </View>
       )}
+
+      {successMsg ? (
+        <View style={styles.successBanner}>
+          <Text style={styles.successText}>✅ {successMsg}</Text>
+        </View>
+      ) : null}
 
       <ScrollView style={styles.form}>
         <Text style={styles.label}>Visit Outcome *</Text>
@@ -207,4 +211,6 @@ const styles = StyleSheet.create({
   submitButton: { backgroundColor: '#1a5276', borderRadius: 8, padding: 14, alignItems: 'center', marginTop: 20 },
   submitButtonDisabled: { backgroundColor: '#95a5a6' },
   submitButtonText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
+  successBanner: { backgroundColor: '#27ae60', padding: 12, alignItems: 'center' },
+  successText: { color: '#fff', fontWeight: 'bold', fontSize: 14 },
 });

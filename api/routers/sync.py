@@ -60,7 +60,24 @@ def sync_visits(
     }
 
 
-@router.get('/delta/{rep_id}')
+@router.get('/visits/{rep_id}')
+def get_visit_history(
+    rep_id: str,
+    db: Session = Depends(get_db),
+    token: str = Depends(verify_token),
+):
+    rows = db.execute(text("""
+        SELECT v.rep_id, r.retailer_id, v.visit_date, v.visit_type as outcome_code,
+               v.product_recommended, v.territory_id, r.tehsil
+        FROM retailer_visit_log v
+        JOIN retailers r ON r.tehsil = v.visit_tehsil AND r.territory_id = v.territory_id
+        WHERE v.rep_id = :rep_id
+        ORDER BY v.visit_date DESC
+        LIMIT 50
+    """), {'rep_id': rep_id}).fetchall()
+    return {'visits': [dict(r._mapping) for r in rows]}
+
+
 def get_delta(
     rep_id: str,
     since: str = None,

@@ -12,13 +12,7 @@ async function getApiEndpoint() {
 function isValidUrl(url) {
   try {
     const parsed = new URL(url);
-    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return false;
-    const hostname = parsed.hostname;
-    // Block private ranges except local network (192.168.x.x allowed for demo)
-    if (/^(10\.|172\.(1[6-9]|2[0-9]|3[0-1])\.)/.test(hostname)) return false;
-    // Allow localhost and local network IPs
-    if (hostname === 'localhost' || hostname === '127.0.0.1' || /^192\.168\./.test(hostname)) return true;
-    return false;
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
   } catch {
     return false;
   }
