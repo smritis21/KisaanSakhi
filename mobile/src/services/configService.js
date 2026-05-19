@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://192.168.1.24:8000/api/v1';
+const API_BASE_URL = 'https://agripulse-web-production.up.railway.app/api/v1';
 const AUTH_TOKEN = 'agripulse-hackathon-secret-key-2026';
 const DEFAULT_REP_ID = 'REP_0016';
 
