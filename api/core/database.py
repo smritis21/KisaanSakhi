@@ -6,12 +6,16 @@ from dotenv import load_dotenv
 
 load_dotenv(override=False)
 
-DATABASE_URL = os.environ.get('DATABASE_URL') or os.getenv('DATABASE_URL', 'postgresql://agripulse:agripulse123@localhost:5432/agripulse')
+DATABASE_URL = os.environ.get('DATABASE_URL') or 'postgresql://agripulse:agripulse123@localhost:5432/agripulse'
 
-if 'railway.internal' in DATABASE_URL:
-    DATABASE_URL = DATABASE_URL.split('?')[0] + '?sslmode=disable'
+# Strip sslmode from URL and pass via connect_args instead
+if '?' in DATABASE_URL:
+    DATABASE_URL = DATABASE_URL.split('?')[0]
 
-engine = create_engine(DATABASE_URL)
+is_railway = 'rlwy.net' in DATABASE_URL or 'railway.internal' in DATABASE_URL
+connect_args = {'sslmode': 'disable'} if is_railway else {}
+
+engine = create_engine(DATABASE_URL, connect_args=connect_args)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
