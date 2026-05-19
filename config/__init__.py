@@ -84,7 +84,10 @@ def reload(config_path: Optional[Path] = None) -> Dict[str, Any]:
 
 # Convenience getters for common values
 def get_database_url() -> str:
-    """Get SQLAlchemy database URL"""
+    """Get SQLAlchemy database URL — env var takes priority"""
+    env_url = os.getenv('DATABASE_URL')
+    if env_url:
+        return env_url
     db = get('database', {})
     return f"postgresql://{db.get('user', 'agripulse')}:{db.get('password', 'agripulse123')}@{db.get('host', 'localhost')}:{db.get('port', 5432)}/{db.get('name', 'agripulse')}"
 
