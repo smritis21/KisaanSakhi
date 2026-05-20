@@ -31,6 +31,26 @@ function ScoreArc({ score }) {
   );
 }
 
+function formatFeatureValue(feature, value) {
+  const v = Number(value);
+  switch (feature) {
+    case 'days_since_last_visit':  return `${Math.round(v)} days ago`;
+    case 'days_to_stockout':       return v <= 0 ? 'Stockout now' : `${Math.round(v)} days left`;
+    case 'tilt_stock':             return `${Math.round(v)} units`;
+    case 'tilt_depletion_rate':    return `${v.toFixed(1)} units/week`;
+    case 'pos_revenue_7d':         return `₹${Math.round(v).toLocaleString('en-IN')}`;
+    case 'pos_revenue_30d':        return `₹${Math.round(v).toLocaleString('en-IN')}`;
+    case 'pos_revenue_90d':        return `₹${Math.round(v).toLocaleString('en-IN')}`;
+    case 'pos_revenue_mom_growth': return `${(v * 100).toFixed(0)}% MoM growth`;
+    case 'txn_count_30d':          return `${Math.round(v)} transactions`;
+    case 'visit_count_30d':        return `${Math.round(v)} visits (30d)`;
+    case 'visit_count_90d':        return `${Math.round(v)} visits (90d)`;
+    case 'sku_count':              return `${Math.round(v)} SKUs`;
+    case 'stockout_flag':          return v === 1 ? 'Yes' : 'No';
+    default:                       return String(Math.round(v * 10) / 10);
+  }
+}
+
 function SHAPCard({ reasons }) {
   if (!reasons?.length) return null;
   return (
@@ -48,7 +68,7 @@ function SHAPCard({ reasons }) {
             }]} />
             <Text style={styles.shapFeature} numberOfLines={1}>{label}</Text>
             <Text style={[styles.shapVal, { color: positive ? AppColors.success : AppColors.danger }]}>
-              {positive ? '▲' : '▼'} {Math.abs(sv).toFixed(3)}
+              {positive ? '▲' : '▼'} {formatFeatureValue(r.feature, r.value ?? r.raw_value)}
             </Text>
           </View>
         );
