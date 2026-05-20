@@ -1,0 +1,215 @@
+# =============================================================================
+# KisaanSakhi — Unified Minikube Cluster Architecture
+# Apply with: kubectl apply -f k8s/architecture.yaml
+# =============================================================================
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kisaansakhi
+
+---
+# =============================================================================
+# PostgreSQL — PersistentVolumeClaim
+# =============================================================================
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-pvc
+  namespace: kisaansakhi
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+
+---
+# =============================================================================
+# PostgreSQL — Service (ClusterIP)
+# =============================================================================
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-service
+  namespace: kisaansakhi
+spec:
+  selector:
+    app: postgres
+  ports:
+    - port: 5432
+      targetPort: 5432
+
+---
+# =============================================================================
+# PostgreSQL — Deployment
+# =============================================================================
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+  namespace: kisaansakhi
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:15-alpine
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: kisaansakhi-secrets
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: kisaansakhi-secrets
+                  key: POSTGRES_PASSWORD
+            - name: POSTGRES_DB
+              value: agripulse
+          volumeMounts:
+            - name: postgres-storage
+              mountPath: /var/lib/postgresql/data
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "agripulse", "-d", "agripulse"]
+            initialDelaySeconds: 10
+            periodSeconds: 5
+      volumes:
+        - name: postgres-storage
+          persistentVolumeClaim:
+            claimName: postgres-pvc
+
+---
+# =============================================================================
+# FastAPI Backend — Service (ClusterIP)
+# =============================================================================
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-service
+  namespace: kisaansakhi
+spec:
+  selector:
+    app: kisaansakhi-api
+  ports:
+    - port: 8000
+      targetPort: 8000
+
+---
+# =============================================================================
+# FastAPI Backend — Deployment
+# =============================================================================
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kisaansakhi-api
+  namespace: kisaansakhi
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kisaansakhi-api
+  template:
+    metadata:
+      labels:
+        app: kisaansakhi-api
+    spec:
+      containers:
+        - name: api
+          image: DOCKER_HUB_USER/kisaansakhi-api:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8000
+          env:
+            - name: DATABASE_URL
+              value: postgresql://agripulse:$(POSTGRES_PASSWORD)@postgres-service.kisaansakhi.svc.cluster.local:5432/agripulse
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: kisaansakhi-secrets
+                  key: POSTGRES_PASSWORD
+            - name: DATABASE_SSL_MODE
+              value: disable
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: kisaansakhi-secrets
+                  key: SECRET_KEY
+          readinessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 20
+
+---
+# =============================================================================
+# Web Frontend — Service (ClusterIP)
+# =============================================================================
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: web-service
+  namespace: kisaansakhi
+spec:
+  selector:
+    app: kisaansakhi-web
+  ports:
+    - port: 80
+      targetPort: 80
+
+---
+# =============================================================================
+# Web Frontend — Deployment
+# =============================================================================
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kisaansakhi-web
+  namespace: kisaansakhi
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kisaansakhi-web
+  template:
+    metadata:
+      labels:
+        app: kisaansakhi-web
+    spec:
+      containers:
+        - name: web
+          image: DOCKER_HUB_USER/kisaansakhi-web:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 10
