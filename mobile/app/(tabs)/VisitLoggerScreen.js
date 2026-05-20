@@ -4,10 +4,10 @@ import {
   View, Text, ScrollView, StyleSheet, SafeAreaView,
   TouchableOpacity, Alert, TextInput, ActivityIndicator, Platform,
 } from 'react-native';
-import SyncStatusBar from '../src/components/SyncStatusBar';
-import { queueVisit, syncPendingVisits, checkNetworkStatus } from '../src/services/syncService';
-import { getPendingCount } from '../src/services/dbService';
-import { AppColors, Shadow } from '../constants/theme';
+import SyncStatusBar from '../../src/components/SyncStatusBar';
+import { queueVisit, syncPendingVisits, checkNetworkStatus } from '../../src/services/syncService';
+import { getPendingCount } from '../../src/services/dbService';
+import { AppColors, Shadow } from '../../constants/theme';
 
 const OUTCOME_CODES = [
   { code: 'VISIT_COMPLETE', label: '✅ Completed',   color: AppColors.success },
