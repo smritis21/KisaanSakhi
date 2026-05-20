@@ -59,6 +59,13 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => <TabIcon emoji="🗺️" color={color} />,
         }}
       />
+      <Tabs.Screen
+        name="VisitLoggerScreen"
+        options={{
+          title: 'Log Visit',
+          tabBarIcon: ({ color }) => <TabIcon emoji="📝" color={color} />,
+        }}
+      />
     </Tabs>
   );
 }

@@ -36,7 +36,8 @@ const OUTCOME_META = {
 function VisitCard({ visit }) {
   const meta = OUTCOME_META[visit.outcome_code] || { label: visit.outcome_code, color: AppColors.textMuted, icon: '📋' };
   const synced = !!visit.synced;
-  const ts = visit.visit_timestamp ? new Date(visit.visit_timestamp) : null;
+  const raw = visit.visit_timestamp;
+  const ts = raw ? new Date(raw.endsWith('Z') || raw.includes('+') ? raw : raw + 'Z') : null;
   const displayTime = ts ? ts.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }) : null;
 
   return (
