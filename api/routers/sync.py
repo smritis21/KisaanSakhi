@@ -67,7 +67,9 @@ def get_visit_history(
     token: str = Depends(verify_token),
 ):
     rows = db.execute(text("""
-        SELECT v.rep_id, r.retailer_id, v.visit_date, v.visit_type as outcome_code,
+        SELECT v.rep_id, r.retailer_id, v.visit_date,
+               v.visit_date::text || 'T' || COALESCE(v.visit_time::text, '00:00:00') as visit_timestamp,
+               v.visit_type as outcome_code,
                v.product_recommended, v.territory_id, r.tehsil
         FROM retailer_visit_log v
         JOIN retailers r ON r.tehsil = v.visit_tehsil AND r.territory_id = v.territory_id
