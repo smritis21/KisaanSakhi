@@ -1,7 +1,60 @@
-.env
-venv/
+# Version control
+.git/
+.gitignore
+
+# Python runtime artifacts
 __pycache__/
 *.pyc
-.git/
+*.pyo
+*.pyd
+*.pycache
+.pytest_cache/
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Environment files — never bake secrets into image
+.env
+.env.*
+!.env.example
+
+# Frontend — not needed in the backend build context
+mobile/
+
+# Raw data — large CSVs with no runtime value (~50MB+)
+Dataset/
+
+# Analysis outputs
+outputs/
 notebooks/
+
+# Documentation
+*.md
+*.docx
+*.pdf
 data/
+
+# Infrastructure config — not needed at runtime
+docker/
+k8s/
+.github/
+
+# JS/proposal artifacts
+proposal.js
+
+# IDE and OS
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Test files
+tests/
+
+# Railway/Vercel deployment config — not needed in image
+Procfile
+railway.toml
