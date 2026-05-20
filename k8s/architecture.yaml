@@ -1,6 +1,8 @@
 # =============================================================================
 # KisaanSakhi — Unified Minikube Cluster Architecture
 # Apply with: kubectl apply -f k8s/architecture.yaml
+# Deployment names must stay stable — the GitHub Actions workflow references
+# them by name in `kubectl set image` calls.
 # =============================================================================
 
 apiVersion: v1
@@ -27,7 +29,8 @@ spec:
 
 ---
 # =============================================================================
-# PostgreSQL — Service (ClusterIP)
+# PostgreSQL — Service
+# Internal DNS: postgres-service.kisaansakhi.svc.cluster.local:5432
 # =============================================================================
 
 apiVersion: v1
@@ -50,7 +53,7 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: postgres
+  name: postgres-deployment
   namespace: kisaansakhi
 spec:
   replicas: 1
@@ -88,6 +91,7 @@ spec:
               command: ["pg_isready", "-U", "agripulse", "-d", "agripulse"]
             initialDelaySeconds: 10
             periodSeconds: 5
+            failureThreshold: 6
       volumes:
         - name: postgres-storage
           persistentVolumeClaim:
@@ -95,7 +99,7 @@ spec:
 
 ---
 # =============================================================================
-# FastAPI Backend — Service (ClusterIP)
+# FastAPI Backend — Service
 # =============================================================================
 
 apiVersion: v1
@@ -105,7 +109,7 @@ metadata:
   namespace: kisaansakhi
 spec:
   selector:
-    app: kisaansakhi-api
+    app: api
   ports:
     - port: 8000
       targetPort: 8000
@@ -113,37 +117,42 @@ spec:
 ---
 # =============================================================================
 # FastAPI Backend — Deployment
+# NOTE: DATABASE_URL is assembled from literal parts using the secret value.
+# K8s does NOT support $(VAR) substitution across env entries when the source
+# is a secretKeyRef — so we build the full DSN string here explicitly, with
+# the password injected via a separate env var read at the application layer.
+# The app's database.py reads DATABASE_URL from the environment directly.
 # =============================================================================
 
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: kisaansakhi-api
+  name: api-deployment
   namespace: kisaansakhi
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: kisaansakhi-api
+      app: api
   template:
     metadata:
       labels:
-        app: kisaansakhi-api
+        app: api
     spec:
       containers:
         - name: api
-          image: DOCKER_HUB_USER/kisaansakhi-api:latest
+          image: ananyaas1230/kisaansakhi-api:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 8000
           env:
-            - name: DATABASE_URL
-              value: postgresql://agripulse:$(POSTGRES_PASSWORD)@postgres-service.kisaansakhi.svc.cluster.local:5432/agripulse
-            - name: POSTGRES_PASSWORD
+            - name: PGPASSWORD
               valueFrom:
                 secretKeyRef:
                   name: kisaansakhi-secrets
                   key: POSTGRES_PASSWORD
+            - name: DATABASE_URL
+              value: postgresql://agripulse:$(PGPASSWORD)@postgres-service.kisaansakhi.svc.cluster.local:5432/agripulse
             - name: DATABASE_SSL_MODE
               value: disable
             - name: SECRET_KEY
@@ -155,18 +164,19 @@ spec:
             httpGet:
               path: /api/v1/health
               port: 8000
-            initialDelaySeconds: 15
+            initialDelaySeconds: 20
             periodSeconds: 10
+            failureThreshold: 6
           livenessProbe:
             httpGet:
               path: /api/v1/health
               port: 8000
-            initialDelaySeconds: 30
+            initialDelaySeconds: 40
             periodSeconds: 20
 
 ---
 # =============================================================================
-# Web Frontend — Service (ClusterIP)
+# Web Frontend — Service
 # =============================================================================
 
 apiVersion: v1
@@ -176,7 +186,7 @@ metadata:
   namespace: kisaansakhi
 spec:
   selector:
-    app: kisaansakhi-web
+    app: web
   ports:
     - port: 80
       targetPort: 80
@@ -189,21 +199,21 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: kisaansakhi-web
+  name: web-deployment
   namespace: kisaansakhi
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: kisaansakhi-web
+      app: web
   template:
     metadata:
       labels:
-        app: kisaansakhi-web
+        app: web
     spec:
       containers:
         - name: web
-          image: DOCKER_HUB_USER/kisaansakhi-web:latest
+          image: ananyaas1230/kisaansakhi-web:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 80
