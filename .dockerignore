@@ -21,7 +21,7 @@ env/
 !.env.example
 
 # Frontend — not needed in the backend build context
-mobile/
+# mobile/
 
 # Raw data — large CSVs with no runtime value (~50MB+)
 Dataset/
