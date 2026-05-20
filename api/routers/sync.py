@@ -78,6 +78,7 @@ def get_visit_history(
             product_recommended
         FROM retailer_visit_log
         WHERE rep_id = :rep_id
+          AND retailer_id LIKE 'RTL%'
         ORDER BY visit_timestamp DESC
         LIMIT 200
     """), {'rep_id': rep_id}).fetchall()
