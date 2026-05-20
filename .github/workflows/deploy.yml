@@ -9,7 +9,6 @@ jobs:
   build-and-deploy:
     name: Build Images → Push → Deploy
     runs-on: ubuntu-latest
-
     env:
       API_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/kisaansakhi-api
       WEB_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/kisaansakhi-web
@@ -58,24 +57,27 @@ jobs:
       # Configure kubectl from the base64-encoded kubeconfig secret
       # -----------------------------------------------------------------------
       - name: Configure kubectl
-        - name: Apply Kubernetes manifests safely
-          run: |
-            csplit -s -z -f resource k8s/architecture.yaml '/---/' '{*}'
-            for file in resource*; do
-              echo "Deploying chunk: $file"
-              kubectl apply -f "$file" --validate=false
-              sleep 2
-            done
-            rm resource*
         run: |
           mkdir -p ~/.kube
           echo "${{ secrets.KUBECONFIG_DATA }}" | base64 -d > ~/.kube/config
           chmod 600 ~/.kube/config
 
       # -----------------------------------------------------------------------
-      # Apply all manifests (idempotent) then pin both deployments to SHA tag
+      # Apply all manifests (drip-feed to protect free tunnel proxies)
       # -----------------------------------------------------------------------
+      - name: Apply Kubernetes manifests safely
+        run: |
+          csplit -s -z -f resource k8s/architecture.yaml '/---/' '{*}'
+          for file in resource*; do
+            echo "Deploying chunk: $file"
+            kubectl apply -f "$file" --validate=false
+            sleep 2
+          done
+          rm resource*
 
+      # -----------------------------------------------------------------------
+      # Pin both deployments to SHA tag and monitor rollouts
+      # -----------------------------------------------------------------------
       - name: Roll out API deployment with new image
         run: |
           kubectl set image deployment/api-deployment \
