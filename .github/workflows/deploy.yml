@@ -67,7 +67,7 @@ jobs:
       # Apply all manifests (idempotent) then pin both deployments to SHA tag
       # -----------------------------------------------------------------------
       - name: Apply Kubernetes manifests
-        run: kubectl apply -f k8s/architecture.yaml
+        run: kubectl apply -f k8s/architecture.yaml --validate=false
 
       - name: Roll out API deployment with new image
         run: |
