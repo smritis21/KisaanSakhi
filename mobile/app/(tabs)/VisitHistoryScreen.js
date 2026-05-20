@@ -19,9 +19,9 @@ async function fetchVisitsFromRailway() {
   const data = await res.json();
   return (data.visits || []).map(v => ({
     ...v,
-    queue_id: `${v.retailer_id}-${v.visit_date}`,
+    queue_id: `${v.retailer_id || v.visit_tehsil}-${v.visit_timestamp}`,
     synced: 1,
-    visit_timestamp: v.visit_date,
+    visit_timestamp: v.visit_timestamp || v.visit_date,
   }));
 }
 

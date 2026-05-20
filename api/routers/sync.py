@@ -71,9 +71,11 @@ def get_visit_history(
     token: str = Depends(verify_token),
 ):
     rows = db.execute(text("""
-        SELECT retailer_id, rep_id, visit_timestamp, visit_date,
-               COALESCE(outcome_code, visit_type) as outcome_code,
-               product_recommended
+        SELECT 
+            COALESCE(retailer_id, visit_tehsil) as retailer_id,
+            rep_id, visit_timestamp, visit_date,
+            COALESCE(outcome_code, visit_type) as outcome_code,
+            product_recommended
         FROM retailer_visit_log
         WHERE rep_id = :rep_id
         ORDER BY visit_timestamp DESC
