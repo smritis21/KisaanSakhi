@@ -58,6 +58,15 @@ jobs:
       # Configure kubectl from the base64-encoded kubeconfig secret
       # -----------------------------------------------------------------------
       - name: Configure kubectl
+        - name: Apply Kubernetes manifests safely
+          run: |
+            csplit -s -z -f resource k8s/architecture.yaml '/---/' '{*}'
+            for file in resource*; do
+              echo "Deploying chunk: $file"
+              kubectl apply -f "$file" --validate=false
+              sleep 2
+            done
+            rm resource*
         run: |
           mkdir -p ~/.kube
           echo "${{ secrets.KUBECONFIG_DATA }}" | base64 -d > ~/.kube/config
@@ -66,8 +75,6 @@ jobs:
       # -----------------------------------------------------------------------
       # Apply all manifests (idempotent) then pin both deployments to SHA tag
       # -----------------------------------------------------------------------
-      - name: Apply Kubernetes manifests
-        run: kubectl apply -f k8s/architecture.yaml --validate=false
 
       - name: Roll out API deployment with new image
         run: |
