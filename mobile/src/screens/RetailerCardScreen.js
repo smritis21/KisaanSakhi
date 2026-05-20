@@ -21,11 +21,12 @@ const ACTION_META = {
 };
 
 function ScoreArc({ score }) {
-  const meta = score >= 75 ? { color: AppColors.danger } : score >= 55 ? { color: AppColors.warning } : { color: AppColors.success };
+  const meta = score >= 70 ? { color: AppColors.success } : score >= 55 ? { color: AppColors.warning } : { color: AppColors.textMuted };
   return (
     <View style={styles.scoreArc}>
       <Text style={[styles.scoreArcNum, { color: meta.color }]}>{score}</Text>
-      <Text style={styles.scoreArcLabel}>score</Text>
+      <Text style={styles.scoreArcLabel}>opportunity</Text>
+      <Text style={styles.scoreArcHint}>↑ higher = better</Text>
     </View>
   );
 }
@@ -220,9 +221,10 @@ const styles = StyleSheet.create({
   anomalyText:    { fontSize: 11, color: AppColors.ANOMALY_ALERT, fontWeight: '700' },
   actionLabel:    { fontSize: 12, color: AppColors.textSecondary, fontWeight: '600' },
 
-  scoreArc:       { width: 64, height: 64, borderRadius: 32, borderWidth: 4, borderColor: AppColors.border, justifyContent: 'center', alignItems: 'center', backgroundColor: AppColors.bg },
+  scoreArc:       { width: 72, height: 72, borderRadius: 36, borderWidth: 4, borderColor: AppColors.border, justifyContent: 'center', alignItems: 'center', backgroundColor: AppColors.bg },
   scoreArcNum:    { fontSize: 20, fontWeight: '900' },
-  scoreArcLabel:  { fontSize: 9, color: AppColors.textMuted, fontWeight: '600' },
+  scoreArcLabel:  { fontSize: 8, color: AppColors.textMuted, fontWeight: '600' },
+  scoreArcHint:   { fontSize: 7, color: AppColors.textMuted },
 
   reasonBox:      { marginHorizontal: 14, marginBottom: 10, backgroundColor: AppColors.bg, borderRadius: 8, padding: 10 },
   reasonText:     { fontSize: 12, color: AppColors.textMuted, fontStyle: 'italic' },
