@@ -36,18 +36,22 @@ def sync_visits(
         try:
             db.execute(text("""
                 INSERT INTO retailer_visit_log
-                    (rep_id, visit_date, territory_id, visit_tehsil, visit_type, product_recommended)
+                    (rep_id, visit_date, visit_timestamp, retailer_id, outcome_code,
+                     territory_id, visit_tehsil, visit_type, product_recommended)
                 SELECT
-                    :rep_id, :visit_date, r.territory_id, r.tehsil, :visit_type, :product
+                    :rep_id, :visit_date, :visit_timestamp, :retailer_id, :outcome_code,
+                    r.territory_id, r.tehsil, :visit_type, :product
                 FROM retailers r
                 WHERE r.retailer_id = :retailer_id
                 LIMIT 1
             """), {
-                'rep_id':      visit.rep_id,
-                'visit_date':  visit.visit_timestamp[:10],
-                'visit_type':  visit.outcome_code or 'retailer meeting',
-                'product':     visit.product_recommended or '',
-                'retailer_id': visit.retailer_id,
+                'rep_id':           visit.rep_id,
+                'visit_date':       visit.visit_timestamp[:10],
+                'visit_timestamp':  visit.visit_timestamp,
+                'retailer_id':      visit.retailer_id,
+                'outcome_code':     visit.outcome_code or 'VISIT_COMPLETE',
+                'visit_type':       visit.outcome_code or 'retailer meeting',
+                'product':          visit.product_recommended or '',
             })
             inserted += 1
         except Exception as e:
@@ -67,15 +71,13 @@ def get_visit_history(
     token: str = Depends(verify_token),
 ):
     rows = db.execute(text("""
-        SELECT v.rep_id, r.retailer_id, v.visit_date,
-               v.visit_date::text || 'T' || COALESCE(v.visit_time::text, '00:00:00') as visit_timestamp,
-               v.visit_type as outcome_code,
-               v.product_recommended, v.territory_id, r.tehsil
-        FROM retailer_visit_log v
-        JOIN retailers r ON r.tehsil = v.visit_tehsil AND r.territory_id = v.territory_id
-        WHERE v.rep_id = :rep_id
-        ORDER BY v.visit_date DESC
-        LIMIT 50
+        SELECT retailer_id, rep_id, visit_timestamp, visit_date,
+               COALESCE(outcome_code, visit_type) as outcome_code,
+               product_recommended
+        FROM retailer_visit_log
+        WHERE rep_id = :rep_id
+        ORDER BY visit_timestamp DESC
+        LIMIT 200
     """), {'rep_id': rep_id}).fetchall()
     return {'visits': [dict(r._mapping) for r in rows]}
 

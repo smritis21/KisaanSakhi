@@ -87,9 +87,10 @@ export default function VisitHistoryScreen() {
   const loadVisits = useCallback(async () => {
     const online = await checkNetworkStatus();
     setIsOnline(online);
-    const { getAllVisits } = await import('../../src/services/dbService');
-    const local = await getAllVisits();
-    setVisits(local.slice().reverse());
+    if (online) {
+      const remote = await fetchVisitsFromRailway();
+      setVisits(remote);
+    }
     setPendingCount(await getPendingCount());
   }, []);
 
