@@ -37,6 +37,7 @@ function VisitCard({ visit }) {
   const meta = OUTCOME_META[visit.outcome_code] || { label: visit.outcome_code, color: AppColors.textMuted, icon: '📋' };
   const synced = !!visit.synced;
   const ts = visit.visit_timestamp ? new Date(visit.visit_timestamp) : null;
+  const displayTime = ts ? ts.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }) : null;
 
   return (
     <View style={[styles.card, Shadow.sm]}>
@@ -69,9 +70,7 @@ function VisitCard({ visit }) {
         ) : null}
 
         {ts && (
-          <Text style={styles.timestamp}>
-            {ts.toLocaleDateString()} · {ts.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-          </Text>
+          <Text style={styles.timestamp}>{displayTime}</Text>
         )}
       </View>
     </View>
