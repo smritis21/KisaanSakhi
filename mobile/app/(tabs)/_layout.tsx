@@ -62,8 +62,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="VisitLoggerScreen"
         options={{
-          title: 'Log Visit',
-          tabBarIcon: ({ color }) => <TabIcon emoji="📝" color={color} />,
+          href: null,
         }}
       />
     </Tabs>

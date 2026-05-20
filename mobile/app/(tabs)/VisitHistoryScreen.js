@@ -1,8 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, SafeAreaView,
   TouchableOpacity, Alert, RefreshControl,
 } from 'react-native';
+import { useFocusEffect } from 'expo-router';
 import { getPendingCount } from '../../src/services/dbService';
 import { syncPendingVisits, checkNetworkStatus } from '../../src/services/syncService';
 import { getApiConfig } from '../../src/services/configService';
@@ -94,9 +95,7 @@ export default function VisitHistoryScreen() {
     setPendingCount(await getPendingCount());
   }, []);
 
-  useEffect(() => {
-    loadVisits();
-  }, [loadVisits]);
+  useFocusEffect(useCallback(() => { loadVisits(); }, [loadVisits]));
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);

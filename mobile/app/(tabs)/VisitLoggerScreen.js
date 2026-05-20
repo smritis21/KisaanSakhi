@@ -52,7 +52,7 @@ export default function VisitLoggerScreen() {
   async function handleSubmit() {
     if (!outcome) { Alert.alert('Required', 'Please select a visit outcome.'); return; }
     setIsSubmitting(true);
-    await new Promise(r => setTimeout(r, 0));
+    await new Promise(r => setTimeout(r, 2000));
     try {
       await queueVisit({
         retailer_id: retailer?.retailer_id || 'UNKNOWN',

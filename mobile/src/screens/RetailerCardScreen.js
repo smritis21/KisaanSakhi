@@ -158,7 +158,7 @@ export default function RetailerCardScreen() {
   }
 
   function handleLogVisit(retailer) {
-    router.push({ pathname: '/VisitLoggerScreen', params: { retailer: JSON.stringify(retailer) } });
+    router.push({ pathname: '/(tabs)/VisitLoggerScreen', params: { retailer: JSON.stringify(retailer) } });
   }
 
   return (
