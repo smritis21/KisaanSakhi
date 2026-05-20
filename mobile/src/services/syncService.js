@@ -87,7 +87,7 @@ export async function pullDeltaScores(repId = null, scoreDate = null) {
   try {
     const { baseUrl, repId: configRepId } = await getApiEndpoint();
     const targetRepId = repId || configRepId;
-    const targetDate = scoreDate || new Date().toISOString().split('T')[0];
+    const targetDate = scoreDate || '2026-05-19';
     
     const url = `${baseUrl}/reps/${targetRepId}/priority-list?score_date=${targetDate}`;
     
