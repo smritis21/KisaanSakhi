@@ -31,7 +31,10 @@ def get_priority_list(
             score_date
         FROM daily_scores
         WHERE rep_id = :rep_id
-          AND score_date = :score_date
+          AND score_date = COALESCE(
+              (SELECT MAX(score_date) FROM daily_scores WHERE rep_id = :rep_id),
+              :score_date
+          )
         ORDER BY priority ASC, opportunity_score DESC
         LIMIT :limit
     """), {'rep_id': rep_id, 'score_date': score_date, 'limit': limit}).fetchall()
