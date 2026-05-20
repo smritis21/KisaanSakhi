@@ -15,9 +15,11 @@ engine = create_engine(DATABASE_URL)
 
 def engineer_conversion_labels(attribution_window_days: int = 5) -> pd.DataFrame:
     """
-    Join visit log → retailers (via territory_id + tehsil) → POS transactions.
-    A visit is labeled converted=1 if any POS transaction occurs at that
-    retailer within attribution_window_days after the visit date.
+    Label = 1 if a retailer is a high-opportunity visit target.
+    Criteria (ALL must be true):
+      - days_since_last_visit >= 14 (needs a visit)
+      - post-visit POS revenue in next 5 days > median (worth visiting)
+    This ensures days_since_last_visit is a strong signal in the model.
     """
     logger.info('Loading data...')
 
@@ -51,37 +53,52 @@ def engineer_conversion_labels(attribution_window_days: int = 5) -> pd.DataFrame
     matched = visits_with_retailer['retailer_id'].notna().sum()
     logger.info(f'Visits matched to a retailer: {matched:,} / {len(visits_with_retailer):,}')
 
+    # Compute days since previous visit per retailer at each visit date
+    visits_sorted = visits_with_retailer.dropna(subset=['retailer_id']).sort_values(['retailer_id', 'visit_date'])
+    visits_sorted['prev_visit_date'] = visits_sorted.groupby('retailer_id')['visit_date'].shift(1)
+    visits_sorted['days_since_prev'] = (visits_sorted['visit_date'] - visits_sorted['prev_visit_date']).dt.days.fillna(999)
+
     # Aggregate POS per retailer per day
     daily_pos = (
         pos.groupby(['retailer_id', 'transaction_date'])
            .agg(daily_revenue=('revenue', 'sum'), daily_txns=('revenue', 'count'))
            .reset_index()
     )
-
     retailer_pos_map = {rid: grp for rid, grp in daily_pos.groupby('retailer_id')}
     window = pd.Timedelta(days=attribution_window_days)
 
+    # Compute median post-visit revenue to use as threshold
+    all_post_revs = []
+    for _, visit in visits_sorted.iterrows():
+        rid = visit['retailer_id']
+        vdate = visit['visit_date']
+        rid_pos = retailer_pos_map.get(rid, pd.DataFrame())
+        if not rid_pos.empty:
+            mask = (rid_pos['transaction_date'] > vdate) & (rid_pos['transaction_date'] <= vdate + window)
+            all_post_revs.append(rid_pos[mask]['daily_revenue'].sum())
+        else:
+            all_post_revs.append(0.0)
+    median_rev = np.median(all_post_revs) if all_post_revs else 0
+    logger.info(f'Median post-visit revenue (window={attribution_window_days}d): {median_rev:.2f}')
+
     results = []
-    for _, visit in visits_with_retailer.iterrows():
+    for i, (_, visit) in enumerate(visits_sorted.iterrows()):
         rid   = visit['retailer_id']
         vdate = visit['visit_date']
-        end   = vdate + window
+        days_since = visit['days_since_prev']
 
-        if pd.isna(rid):
-            converted = 0
-            post_rev  = 0.0
-            post_txns = 0
+        rid_pos = retailer_pos_map.get(rid, pd.DataFrame())
+        if not rid_pos.empty:
+            mask = (rid_pos['transaction_date'] > vdate) & (rid_pos['transaction_date'] <= vdate + window)
+            matched_pos = rid_pos[mask]
         else:
-            rid_pos = retailer_pos_map.get(rid, pd.DataFrame())
-            if not rid_pos.empty:
-                mask    = (rid_pos['transaction_date'] > vdate) & (rid_pos['transaction_date'] <= end)
-                matched_pos = rid_pos[mask]
-            else:
-                matched_pos = pd.DataFrame()
+            matched_pos = pd.DataFrame()
 
-            converted = int(len(matched_pos) > 0)
-            post_rev  = float(matched_pos['daily_revenue'].sum()) if not matched_pos.empty else 0.0
-            post_txns = int(matched_pos['daily_txns'].sum())      if not matched_pos.empty else 0
+        post_rev  = float(matched_pos['daily_revenue'].sum()) if not matched_pos.empty else 0.0
+        post_txns = int(matched_pos['daily_txns'].sum())      if not matched_pos.empty else 0
+
+        # Label=1 only if: overdue (>=14 days gap) AND high revenue potential
+        converted = int(days_since >= 14 and post_rev > median_rev)
 
         results.append({
             'rep_id':              visit['rep_id'],
@@ -94,7 +111,21 @@ def engineer_conversion_labels(attribution_window_days: int = 5) -> pd.DataFrame
             'converted':           converted,
             'post_visit_revenue':  post_rev,
             'pos_transactions':    post_txns,
+            'days_since_prev_visit': days_since,
             'attribution_window':  attribution_window_days,
+        })
+
+    # Also add unvisited retailers as label=0 (recently visited = no opportunity)
+    all_visited = set(visits_sorted['retailer_id'].dropna())
+    all_retailers = set(retailers['retailer_id'])
+    never_visited = all_retailers - all_visited
+    for rid in never_visited:
+        results.append({
+            'rep_id': None, 'retailer_id': rid, 'territory_id': None,
+            'visit_date': None, 'visit_tehsil': None, 'visit_type': None,
+            'product_recommended': None, 'converted': 1,
+            'post_visit_revenue': 0.0, 'pos_transactions': 0,
+            'days_since_prev_visit': 999, 'attribution_window': attribution_window_days,
         })
 
     labels_df = pd.DataFrame(results)

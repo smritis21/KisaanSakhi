@@ -1,17 +1,19 @@
 """
 SHAP Explanation Engine
 """
+import os
 import pandas as pd
 import numpy as np
 import shap
 import joblib
 import json
+from dotenv import load_dotenv
 from sqlalchemy import create_engine
-import os
 from pathlib import Path
 import yaml
 import re
 
+load_dotenv()
 DATABASE_URL = os.getenv('DATABASE_URL', 'postgresql://agripulse:agripulse123@localhost:5432/agripulse')
 engine = create_engine(DATABASE_URL)
 
