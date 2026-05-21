@@ -177,6 +177,22 @@ This creates a feedback loop: better data → better recommendations → better 
 
 ---
 
+## Screenshots
+
+| Dashboard | Priority List |
+|---|---|
+| ![Dashboard](screenshots/dashboard.png) | ![Priority List](screenshots/priority_list.png) |
+
+| Retailer Details | Log Visit |
+|---|---|
+| ![Retailer Details](screenshots/dashboard_retailer_details.png) | ![Log Visit](screenshots/log_visit.png) |
+
+| Visit History | Route Planning |
+|---|---|
+| ![Visit History](screenshots/visit_history.png) | ![Route](screenshots/Routes.png) |
+
+---
+
 ## Architecture
 
 ### System Overview
@@ -242,22 +258,6 @@ sequenceDiagram
     Rep->>App: Logs visit after meeting
     App->>API: POST /api/v1/sync (when online)
 ```
-
----
-
-## Screenshots
-
-| Dashboard | Priority List |
-|---|---|
-| ![Dashboard](screenshots/dashboard.png) | ![Priority List](screenshots/priority_list.png) |
-
-| Retailer Details | Log Visit |
-|---|---|
-| ![Retailer Details](screenshots/dashboard_retailer_details.png) | ![Log Visit](screenshots/log_visit.png) |
-
-| Visit History | Route Planning |
-|---|---|
-| ![Visit History](screenshots/visit_history.png) | ![Route](screenshots/Routes.png) |
 
 ---
 
@@ -328,6 +328,27 @@ curl -H "Authorization: Bearer agripulse-hackathon-secret-key-2026" \
   "http://localhost:8000/api/v1/reps/REP_0016/priority-list?limit=5"
 ```
 
+**Response:**
+```json
+{
+  "rep_id": "REP_0016",
+  "score_date": "2026-05-19",
+  "retailers": [
+    {
+      "retailer_id": "RET_0042",
+      "retailer_name": "Sharma Agro Inputs",
+      "tehsil": "Karnal",
+      "opportunity_score": 0.847,
+      "action_code": "URGENT_RESTOCK",
+      "action_label": "Urgent: Restock Tilt 250 EC - stockout in 14 days or less",
+      "top_reason_text": "Tilt 250 EC stock level: 8.0 (decreases score)",
+      "days_to_stockout": 9.3,
+      "priority": 1
+    }
+  ]
+}
+```
+
 ### Log a Visit
 ```bash
 curl -X POST -H "Authorization: Bearer agripulse-hackathon-secret-key-2026" \
@@ -360,11 +381,11 @@ Here's how the system stays fresh:
 ## Current Limitations & Future Plans
 
 ### What Works Now
-- ✅ Single rep view (REP_0016)
-- ✅ Basic visit logging
-- ✅ Manual rescoring pipeline
-- ✅ Offline mobile app
-- ✅ Live API and web dashboard
+- ✅ Demo covers Sirsa territory (REP_0016) — full multi-rep support in progress
+- ✅ Basic visit logging with offline sync
+- ✅ Manual rescoring pipeline for fresh recommendations
+- ✅ Offline-first mobile app for rural connectivity
+- ✅ Live API and web dashboard with working demo
 
 ### Coming Soon
 - **Role-Based Access Control (RBAC)** - Different views for reps, managers, admins
