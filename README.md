@@ -177,6 +177,74 @@ This creates a feedback loop: better data → better recommendations → better 
 
 ---
 
+## Architecture
+
+### System Overview
+
+```mermaid
+graph TB
+    subgraph Data Sources
+        A[POS Transactions] --> E
+        B[Visit Logs] --> E
+        C[Inventory Data] --> E
+        D[WhatsApp Campaigns] --> E
+    end
+
+    subgraph Backend
+        E[Feature Engineering Pipeline] --> F[ML Scoring Model]
+        F --> G[SHAP Explainer]
+        G --> H[Next Best Action Engine]
+        H --> I[FastAPI Server]
+    end
+
+    subgraph Config
+        J[config.yaml] --> H
+        K[ENV Variables] --> I
+    end
+
+    subgraph Clients
+        I --> L[Mobile App - React Native]
+        I --> M[Web Dashboard]
+        I --> N[Admin / Manager View]
+    end
+```
+
+### ML Data Flow
+
+```mermaid
+flowchart LR
+    A[Raw Data] --> B[Feature Engineering]
+    B --> C{ML Model}
+    C --> D[Opportunity Score 0–1]
+    D --> E[SHAP Explainer]
+    E --> F[Top 3 Reasons]
+    D --> G[Action Rule Engine]
+    G --> H[Ranked Visit List]
+    F --> H
+    H --> I[API Response]
+```
+
+### User Workflow
+
+```mermaid
+sequenceDiagram
+    participant Rep as Sales Rep
+    participant App as Mobile App
+    participant API as FastAPI Backend
+    participant ML as ML Pipeline
+
+    Rep->>App: Opens app in the morning
+    App->>API: GET /api/v1/retailers
+    API->>ML: Run inference pipeline
+    ML-->>API: Scored + ranked retailer list
+    API-->>App: Returns prioritized list with actions
+    App-->>Rep: Shows "Visit Sharma Agro first — stockout risk"
+    Rep->>App: Logs visit after meeting
+    App->>API: POST /api/v1/sync (when online)
+```
+
+---
+
 ## Screenshots
 
 | Dashboard | Priority List |
