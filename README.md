@@ -274,6 +274,41 @@ sequenceDiagram
 
 ---
 
+## Environment Variables
+
+Copy `.env.example` to `.env` and fill in the values:
+
+```env
+# Database
+DATABASE_URL=postgresql://user:password@localhost:5432/agripulse
+
+# API
+API_AUTH_TOKEN=agripulse-hackathon-secret-key-2026
+API_HOST=0.0.0.0
+API_PORT=8000
+
+# Mobile
+DEFAULT_REP_ID=REP_0016
+
+# ML
+MODEL_PATH=models/
+
+# Logging
+LOG_LEVEL=INFO
+```
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `DATABASE_URL` | Yes | PostgreSQL connection string |
+| `API_AUTH_TOKEN` | Yes | Bearer token for API authentication |
+| `DEFAULT_REP_ID` | No | Default rep ID for the mobile app |
+| `MODEL_PATH` | No | Path to trained model artifacts |
+| `LOG_LEVEL` | No | `DEBUG`, `INFO`, `WARNING`, or `ERROR` |
+
+> Never commit your `.env` file. It is already in `.gitignore`.
+
+---
+
 ## Quick Start
 
 ### Option 1: Docker (Easiest)
@@ -474,7 +509,7 @@ Special thanks to the SHAP library for making our recommendations explainable, a
 
 <div align="center">
 
-**AgriPulse** - Making field sales smarter, one visit at a time.
+**AgriPulse** - Built for the field. Works in the field.
 
 *Built for Indian agriculture by Team KisaanSakhi*
 
