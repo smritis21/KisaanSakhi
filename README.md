@@ -49,6 +49,7 @@ curl "https://kisaansakhi-api.onrender.com/api/v1/reps/REP_0016/priority-list?li
 - [How The Smart Scoring Works](#how-the-smart-scoring-works)
 - [The Complete Workflow](#the-complete-workflow)
 - [Tech Stack](#tech-stack)
+- [Environment Variables](#environment-variables)
 - [Quick Start](#quick-start)
 - [API Examples](#api-examples)
 - [The Rescoring Pipeline](#the-rescoring-pipeline)
