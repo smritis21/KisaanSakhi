@@ -59,22 +59,6 @@ curl "https://kisaansakhi-api.onrender.com/api/v1/reps/REP_0016/priority-list?li
 
 ---
 
-## Screenshots
-
-| Dashboard | Priority List |
-|---|---|
-| ![Dashboard](screenshots/dashboard.png) | ![Priority List](screenshots/priority_list.png) |
-
-| Retailer Details | Log Visit |
-|---|---|
-| ![Retailer Details](screenshots/dashboard_retailer_details.png) | ![Log Visit](screenshots/log_visit.png) |
-
-| Visit History | Route Planning |
-|---|---|
-| ![Visit History](screenshots/visit_history.png) | ![Route](screenshots/Routes.png) |
-
----
-
 ## What's AgriPulse?
 
 > **Built for Syngenta × IIT Madras Hackathon 2026 - Track 2: Field Force Intelligence**
@@ -193,14 +177,32 @@ This creates a feedback loop: better data → better recommendations → better 
 
 ---
 
+## Screenshots
+
+| Dashboard | Priority List |
+|---|---|
+| ![Dashboard](screenshots/dashboard.png) | ![Priority List](screenshots/priority_list.png) |
+
+| Retailer Details | Log Visit |
+|---|---|
+| ![Retailer Details](screenshots/dashboard_retailer_details.png) | ![Log Visit](screenshots/log_visit.png) |
+
+| Visit History | Route Planning |
+|---|---|
+| ![Visit History](screenshots/visit_history.png) | ![Route](screenshots/Routes.png) |
+
+---
+
 ## Tech Stack
 
-**Smart Scoring:** Python + XGBoost (learns from patterns)  
-**Mobile App:** React Native (works on Android & iOS)  
-**API:** FastAPI (connects everything)  
-**Database:** PostgreSQL (stores all the data)  
-**Notebooks:** Jupyter (for experimenting and analysis)  
-**Deployment:** Docker (easy setup anywhere)
+| Component | Technology | Why We Chose It |
+|-----------|------------|----------------|
+| **Smart Scoring** | Python + XGBoost | Learns from patterns, handles tabular data well |
+| **Mobile App** | React Native | Single codebase for Android & iOS |
+| **API** | FastAPI | Fast, automatic docs, async support |
+| **Database** | PostgreSQL | Reliable, handles complex queries |
+| **Notebooks** | Jupyter | Perfect for ML experiments |
+| **Deployment** | Docker | Consistent environments everywhere |
 
 ---
 
@@ -313,12 +315,23 @@ Here's how the system stays fresh:
 ```
 KisaanSakhi/
 ├── api/                    # FastAPI backend
+│   ├── routers/            # API endpoints (reps, retailers, sync)
+│   └── core/               # Model loading, auth
 ├── mobile/                 # React Native app  
-├── ml/                     # Smart scoring models
+│   ├── src/screens/        # Dashboard, visit logger, route view
+│   └── src/services/       # Offline sync, config management
+├── ml/                     # Machine learning pipeline
+│   ├── train_xgboost.py    # Opportunity scorer training
+│   ├── anomaly_detection.py # Isolation Forest for demand spikes
+│   ├── explain.py          # SHAP explanations
+│   └── inference_pipeline.py # Daily scoring orchestrator
 ├── pipeline/               # Data processing
+│   ├── feature_engineering.py # Rolling windows, stockout risk
+│   └── label_engineering.py   # Training labels from visit outcomes
 ├── notebooks/              # Analysis & experiments
-├── screenshots/            # App screenshots
-├── config/                 # Settings & thresholds
+│   └── 01_data_exploration.ipynb # EDA and model validation
+├── screenshots/            # App screenshots for documentation
+├── config/                 # YAML configuration files
 ├── rescore.py             # Manual rescoring script
 └── README.md              # You are here!
 ```
@@ -329,17 +342,34 @@ KisaanSakhi/
 
 Want to make AgriPulse better? Here's how:
 
-1. **Fork the repo** on GitHub
-2. **Create a branch** for your feature
-3. **Make your changes** (keep it simple!)
-4. **Test everything** with `pytest tests/`
-5. **Submit a pull request**
+### Getting Started
+```bash
+# Fork the repo, then clone your fork
+git clone https://github.com/your-username/KisaanSakhi.git
+cd KisaanSakhi
+git checkout smriti
 
-We especially welcome:
-- Multi-language support
-- Mobile app improvements  
-- Better scoring algorithms
-- UI/UX enhancements
+# Create a feature branch
+git checkout -b feature/your-feature-name
+```
+
+### Development Guidelines
+- **Keep it field-ready** - Every feature should work on a motorcycle in rural areas
+- **Test with real data** - Use the synthetic dataset, but think about real field scenarios
+- **Document your changes** - Update the README if you change APIs or add features
+- **Follow the existing patterns** - Look at how scoring, actions, and explanations work
+
+### What We Need Most
+- **Multi-language support** - Hindi, Marathi, Telugu, Kannada interfaces
+- **Mobile improvements** - Better offline sync, voice input, photo capture
+- **Scoring algorithms** - Better anomaly detection, seasonal patterns
+- **Manager dashboards** - Territory analytics, performance tracking
+
+### Pull Request Process
+1. Make sure tests pass: `pytest tests/`
+2. Add tests for new features
+3. Keep PRs focused - one feature per PR
+4. Write clear commit messages
 
 ---
 
