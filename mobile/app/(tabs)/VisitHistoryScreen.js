@@ -124,7 +124,7 @@ export default function VisitHistoryScreen() {
       {/* Header */}
       <View style={styles.header}>
         <View>
-          <Text style={styles.headerEyebrow}>AgriPulse AI</Text>
+          <Text style={styles.headerEyebrow}>AgriPulse</Text>
           <Text style={styles.headerTitle}>Visit History</Text>
           <Text style={styles.headerRep}>👤 REP_0016</Text>
         </View>

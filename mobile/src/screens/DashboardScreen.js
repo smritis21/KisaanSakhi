@@ -271,7 +271,7 @@ export default function DashboardScreen() {
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
           <View>
-            <Text style={styles.headerEyebrow}>AgriPulse AI</Text>
+            <Text style={styles.headerEyebrow}>AgriPulse</Text>
             <Text style={styles.headerTitle}>Field Dashboard</Text>
           </View>
           <View style={[styles.onlinePill, { backgroundColor: isOnline ? '#a5d6a7' : '#ef9a9a' }]}>

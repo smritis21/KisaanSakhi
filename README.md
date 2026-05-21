@@ -1,10 +1,46 @@
-# AgriPulse AI
+# AgriPulse
 
 By **Team KisaanSakhi** - Built for the **Syngenta × IIT Madras Hackathon 2026**
 
 Syngenta field reps manage 80-100 agri-retailers across multiple tehsils. Every morning they decide who to visit, in what order, and what to talk about - entirely by gut feel. They don't know which retailer is 9 days from a stockout, which one just had a demand spike, or which high-value account hasn't been touched in 3 weeks.
 
-AgriPulse AI fixes that. It scores every retailer in a rep's territory daily and delivers a ranked, explainable action list to their phone - one that works offline in rural areas with no signal.
+AgriPulse fixes that. It scores every retailer in a rep's territory daily and delivers a ranked, explainable action list to their phone - one that works offline in rural areas with no signal.
+
+---
+
+## 🚀 Live Demo
+
+| | URL |
+|---|---|
+| **Web App** | https://kisaansakhi-web.onrender.com |
+| **API** | https://kisaansakhi-api.onrender.com |
+| **API Docs** | https://kisaansakhi-api.onrender.com/docs |
+
+**Demo credentials:**
+- Rep ID: `REP_0016` (Sirsa territory, Haryana)
+- Auth token: `agripulse-hackathon-secret-key-2026`
+
+**Try the API:**
+```bash
+curl "https://kisaansakhi-api.onrender.com/api/v1/reps/REP_0016/priority-list?limit=5&score_date=2026-05-19" \
+  -H "Authorization: Bearer agripulse-hackathon-secret-key-2026"
+```
+
+---
+
+## 📸 Screenshots
+
+| Dashboard | Priority List |
+|---|---|
+| ![Dashboard](screenshots/dashboard.png) | ![Priority List](screenshots/priority_list.png) |
+
+| Retailer Details | Log Visit |
+|---|---|
+| ![Retailer Details](screenshots/dashboard_retailer_details.png) | ![Log Visit](screenshots/log_visit.png) |
+
+| Visit History | Route |
+|---|---|
+| ![Visit History](screenshots/visit_history.png) | ![Route](screenshots/Routes.png) |
 
 ---
 
@@ -155,34 +191,42 @@ Back online → auto-sync → POST /api/v1/sync/visit → synced=1
 
 ## Running It
 
-**Requirements:** Python 3.10+, Node.js 18+, Docker
+**Requirements:** Python 3.10+, Node.js 18+
+
+The backend and database are deployed on Railway. To run locally:
 
 ```bash
-# 1. Database
-cd docker && docker-compose up -d
-
-# 2. Python setup
+# 1. Python setup
 pip install -r requirements.txt
-cp .env.example .env
+cp .env.example .env  # set DATABASE_URL to Railway Postgres
 
-# 3. Data pipeline
+# 2. Data pipeline (against Railway DB)
+export DATABASE_URL="postgresql://..."
 python pipeline/ingest.py
 python pipeline/feature_engineering.py
 python pipeline/label_engineering.py
 
-# 4. Train
+# 3. Train
 python ml/train_xgboost.py
 python ml/anomaly_detection.py
 python ml/explain.py
 
-# 5. Score
+# 4. Score
 python ml/inference_pipeline.py
 
-# 6. API
+# 5. API (local)
 uvicorn api.main:app --reload --port 8000
 
-# 7. Mobile
-cd mobile && npm install && npx expo start
+# 6. Mobile (web)
+cd mobile && npm install
+npx expo export --platform web
+npx vercel dist --prod
+```
+
+**Re-score after logging visits:**
+```bash
+export DATABASE_URL="postgresql://..."
+python rescore.py
 ```
 
 ---
@@ -230,8 +274,8 @@ python -m pytest tests/
 |---|---|
 | ML | XGBoost 3.2, scikit-learn 1.8, SHAP 0.51 |
 | Backend | FastAPI, SQLAlchemy 2.0, PostgreSQL 15 |
-| Mobile | React Native (Expo), SQLite |
-| Infra | Docker, uvicorn |
+| Web App | React Native (Expo Web), deployed on Vercel |
+| Infra | Railway (API + PostgreSQL), Vercel (frontend) |
 
 ---
 

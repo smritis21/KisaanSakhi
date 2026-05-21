@@ -82,7 +82,7 @@ export default function VisitLoggerScreen() {
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerEyebrow}>AgriPulse AI</Text>
+        <Text style={styles.headerEyebrow}>AgriPulse</Text>
         <Text style={styles.headerTitle}>Log Visit</Text>
         {retailer && (
           <View style={styles.retailerPill}>
