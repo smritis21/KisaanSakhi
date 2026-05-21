@@ -41,6 +41,24 @@ curl "https://kisaansakhi-api.onrender.com/api/v1/reps/REP_0016/priority-list?li
 
 ---
 
+## Table of Contents
+
+- [What's AgriPulse?](#whats-agripulse)
+- [The Real Problem](#the-real-problem)
+- [What It Actually Does](#what-it-actually-does)
+- [How The Smart Scoring Works](#how-the-smart-scoring-works)
+- [The Complete Workflow](#the-complete-workflow)
+- [Tech Stack](#tech-stack)
+- [Quick Start](#quick-start)
+- [API Examples](#api-examples)
+- [The Rescoring Pipeline](#the-rescoring-pipeline)
+- [Current Limitations & Future Plans](#current-limitations--future-plans)
+- [Project Structure](#project-structure)
+- [Contributing](#contributing)
+- [License & Credits](#license--credits)
+
+---
+
 ## Screenshots
 
 | Dashboard | Priority List |
@@ -175,7 +193,7 @@ This creates a feedback loop: better data → better recommendations → better 
 
 ---
 
-## Tech Stack (The Simple Version)
+## Tech Stack
 
 **Smart Scoring:** Python + XGBoost (learns from patterns)  
 **Mobile App:** React Native (works on Android & iOS)  
@@ -265,7 +283,7 @@ Here's how the system stays fresh:
 3. **Manual rescore** → Run `rescore.py` to update all scores
 4. **Fresh recommendations** → Next API call returns updated priority list
 
-**Why manual for now?** We wanted to keep it simple for the hackathon. In production, this would run automatically after each visit or on a schedule.
+**Why manual for now?** We built it this way for the hackathon to keep things simple and reliable. In production, this runs automatically after each visit.
 
 ---
 
@@ -339,8 +357,8 @@ Special thanks to the SHAP library for making our recommendations explainable, a
 
 **AgriPulse** - Making field sales smarter, one visit at a time.
 
-*Built with love for Indian agriculture*
+*Built for Indian agriculture by Team KisaanSakhi*
 
-[![Star on GitHub](https://img.shields.io/github/stars/smritis21/KisaanSakhi?style=social)](https://github.com/smritis21/KisaanSakhi)
+**[Try the live demo](https://kisaansakhi-web.onrender.com)** • **[View API docs](https://kisaansakhi-api.onrender.com/docs)** • **[Star on GitHub](https://github.com/smritis21/KisaanSakhi)**
 
 </div>
