@@ -4,9 +4,9 @@
 
 **By Team KisaanSakhi - Built for the Syngenta × IIT Madras Hackathon 2026**
 
-*AI-powered field sales intelligence for the agriculture sector.*
+*Smart field sales for agriculture - because gut feelings don't scale!*
 
-*Every sales rep gets a ranked, explainable, real-time list of who to visit today — and exactly why.*
+*Every sales rep gets a simple list: who to visit today and why.*
 
 <br/>
 
@@ -16,33 +16,32 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://typescriptlang.org)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=flat-square&logo=docker&logoColor=white)](https://docker.com)
 [![License: MIT](https://img.shields.io/badge/License-MIT-22c55e?style=flat-square)](LICENSE)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen?style=flat-square)](CONTRIBUTING.md)
 
 </div>
 
 ---
 
-## 🚀 Live Demo
+## Try It Live!
 
-| | URL |
+| What | Where |
 |---|---|
 | **Web App** | https://kisaansakhi-web.onrender.com |
 | **API** | https://kisaansakhi-api.onrender.com |
-| **API Docs** | https://kisaansakhi-api.onrender.com/docs |
+| **API Playground** | https://kisaansakhi-api.onrender.com/docs |
 
-**Demo credentials:**
-- Rep ID: `REP_0016` (Sirsa territory, Haryana)
-- Auth token: `agripulse-hackathon-secret-key-2026`
+**Want to test it?**
+- Rep ID: `REP_0016` (covers Sirsa, Haryana)
+- Secret key: `agripulse-hackathon-secret-key-2026`
 
-**Try the API:**
+**Quick API test:**
 ```bash
-curl "https://kisaansakhi-api.onrender.com/api/v1/reps/REP_0016/priority-list?limit=5&score_date=2026-05-19" \
+curl "https://kisaansakhi-api.onrender.com/api/v1/reps/REP_0016/priority-list?limit=5" \
   -H "Authorization: Bearer agripulse-hackathon-secret-key-2026"
 ```
 
 ---
 
-## 📸 Screenshots
+## Screenshots
 
 | Dashboard | Priority List |
 |---|---|
@@ -52,194 +51,242 @@ curl "https://kisaansakhi-api.onrender.com/api/v1/reps/REP_0016/priority-list?li
 |---|---|
 | ![Retailer Details](screenshots/dashboard_retailer_details.png) | ![Log Visit](screenshots/log_visit.png) |
 
-| Visit History | Route |
+| Visit History | Route Planning |
 |---|---|
 | ![Visit History](screenshots/visit_history.png) | ![Route](screenshots/Routes.png) |
 
 ---
 
-## Table of Contents
+## What's AgriPulse?
 
-- [What Is AgriPulse?](#what-is-agripulse)
-- [The Problem](#the-problem)
-- [Features](#features)
-- [Architecture](#architecture)
-- [Tech Stack](#tech-stack)
-- [Project Structure](#project-structure)
-- [Installation](#installation)
-- [Environment Variables](#environment-variables)
-- [Usage Guide](#usage-guide)
-- [API Documentation](#api-documentation)
-- [Machine Learning Pipeline](#machine-learning-pipeline)
-- [Mobile App](#mobile-app)
-- [Configuration](#configuration)
-- [Performance & Scalability](#performance--scalability)
-- [Security](#security)
-- [Roadmap](#roadmap)
-- [Contributing](#contributing)
-- [Testing](#testing)
-- [Deployment](#deployment)
-- [Recommended Hosting](#recommended-hosting)
-- [License](#license)
-- [Acknowledgements](#acknowledgements)
+> **Built for Syngenta × IIT Madras Hackathon 2026 - Track 2: Field Force Intelligence**
+
+Picture this: You're a Syngenta field rep. You have 80+ retailers to visit across multiple villages. Every morning you ask yourself: "Who should I visit today?"
+
+Right now, it's pure guesswork. Maybe you haven't been to Sharma Uncle's shop in a while. Maybe Priya's store usually orders a lot. But you don't actually *know* who needs you most.
+
+**AgriPulse changes that.**
+
+It looks at all your retailers, checks their sales, stock levels, and recent activity, then gives you a simple ranked list: "Visit these 5 shops today, in this order, for these reasons."
+
+No complex dashboards. No confusing charts. Just a clear answer to "where should I go first?"
 
 ---
 
-## What Is AgriPulse?
+## The Real Problem
 
-> **Built for Syngenta × IIT Madras Hackathon 2026 - Track 2: AI-Guided Field Force Intelligence**
+Let's be honest about field sales in agriculture:
 
-Syngenta field reps manage 80-100 agri-retailers across multiple tehsils. Every morning they decide who to visit, in what order, and what to talk about - entirely by gut feel. They don't know which retailer is 9 days from a stockout, which one just had a demand spike, or which high-value account hasn't been touched in 3 weeks.
+**Too many shops, too little time**  
+80 retailers × 5 days a week = you can't visit everyone. So who gets priority?
 
-AgriPulse fixes that. It scores every retailer in a rep's territory daily and delivers a ranked, explainable action list to their phone - one that works offline in rural areas with no signal.
+**Silent stockouts**  
+A retailer runs out of seeds right during planting season. A farmer comes to buy, goes home empty-handed. Nobody saw it coming.
 
-The system ingests point-of-sale data, visit history, inventory levels, and WhatsApp campaign engagement. It runs them through an ML scoring pipeline, surfaces the top reasons behind every decision using SHAP explainability, and delivers a ranked, actionable visit list to the rep's phone — even offline.
+**Playing favorites**  
+Reps naturally visit familiar shops or easy conversations. The high-value but shy retailer gets ignored.
 
----
+**Managers in the dark**  
+"Did you visit the Karnal territory this week?" "Umm... yes?" Nobody really knows what's happening in the field.
 
-## The Problem
+**Inconsistent results**  
+Two reps, same territory, completely different visit patterns. One makes ₹2L/month, the other makes ₹50K. Why?
 
-Agriculture input companies (seeds, fertilizers, pesticides) sell through a network of thousands of rural retailers. Their field sales teams visit these retailers regularly to push products, check stock, and build relationships.
-
-Without data, every visit decision is a guess.
-
-A rep with 80 retailers in their territory and 5 working days in a week physically cannot visit everyone. The typical approach is gut instinct: "I haven't been to this shop in a while" or "that guy usually orders a lot." This creates four real problems:
-
-**Stockouts happen silently.** A retailer runs out of a product and nobody knew it was coming. A farmer shows up to buy seeds during the planting window and goes home empty-handed. That's not just lost revenue — it's a failed harvest.
-
-**High-value retailers get ignored.** Reps naturally gravitate toward familiar shops or easy conversations, not necessarily the ones with the highest revenue potential.
-
-**Manager visibility is zero.** Sales managers have no reliable way to know which retailers were visited, what was discussed, or which areas are being under-served.
-
-**Rep performance is uneven.** Without a shared prioritization framework, two reps covering the same territory may follow completely different visit patterns with wildly different results.
-
-AgriPulse replaces intuition with evidence — while still being simple enough for a field rep to use while driving between villages.
+AgriPulse replaces guesswork with data — but keeps it simple enough to use while riding a motorcycle between villages.
 
 ---
 
-## Features
+## What It Actually Does
 
-### ML-Based Retailer Opportunity Scoring
+### Smart Retailer Scoring
+Every retailer gets a score from 0 to 1. Think of it like a "hotness" meter:
+- 0.9 = "Visit TODAY, something big is happening"
+- 0.5 = "Visit this week when you have time"  
+- 0.2 = "Skip for now, focus elsewhere"
 
-Every retailer in the system receives a continuous opportunity score between 0.0 and 1.0. This is not a rule-based calculation — it is a trained ML model that weighs purchase history, visit recency, inventory risk, campaign engagement, and revenue trend together.
+### Clear Action Categories
+No confusing numbers. Just simple actions:
 
-The score answers: *"If I visit this retailer today, how likely is this to result in a meaningful outcome?"*
+| What You See | What It Means |
+|---|---|
+| **Stockout Alert** | They'll run out of stock in 2 weeks |
+| **Overdue - High Priority** | Haven't visited in 3+ weeks, high potential |
+| **Overdue - Standard** | Haven't visited in 2+ weeks |
+| **High Opportunity** | Something interesting is happening here |
 
-### Next Best Action Engine
+### Why This Retailer?
+You don't just get "visit Sharma Agro." You get:
+> *"Sharma Agro: Last purchase 45 days ago. Stock critically low. Opened 3 WhatsApp messages this week."*
 
-A score alone is not actionable. The Next Best Action engine translates scores into four clear categories:
+Now you know exactly what to talk about when you walk in.
 
-| Action | Trigger Condition |
-|--------|------------------|
-| Stockout Alert | Less than 14 days of stock remaining |
-| Overdue Visit — High Priority | 21+ days without a visit, score ≥ 0.7 |
-| Overdue Visit — Standard | 14+ days without a visit, score ≥ 0.6 |
-| High Opportunity | Score above threshold, recent engagement |
+### Works Offline
+Rural connectivity is patchy. The mobile app downloads your list in the morning and works all day without internet. When you get signal, it syncs everything automatically.
 
-Reps see a clean ranked list ordered by urgency and opportunity — not alphabetically, not randomly.
-
-### SHAP Explainability
-
-The system surfaces the top 3 reasons behind every score using SHAP (SHapley Additive exPlanations). A rep doesn't just see "priority: HIGH" — they see:
-
-> *"Last purchase was 45 days ago. Stock is critically low. Retailer opened 3 WhatsApp messages this week."*
-
-This matters for trust. Reps are more likely to follow the system's recommendations when they understand why a retailer is flagged.
-
-### Offline-First Mobile App
-
-The React Native mobile app is designed for patchy rural connectivity. Retailer lists, scores, and visit notes are cached on-device. When the rep gets a signal, the app syncs automatically. No action is lost to a bad network.
-
-### Dynamic Configuration Without Redeployment
-
-Every threshold — stockout alert days, visit overdue windows, score cutoffs, feature engineering windows — lives in a single YAML file and can be updated at runtime via API call. No code change, no deployment, no downtime.
-
-### Feature Engineering Pipeline
-
-POS data is not used raw. The pipeline computes rolling windows (7, 30, 90 days), calculates stockout risk from inventory trends, extracts WhatsApp engagement signals, and caps revenue growth at ±500% to handle data anomalies. This ensures the model is working from rich, clean signals.
+### Live Updates After Visits
+Here's the cool part: When you log a visit in the mobile app, the system automatically recalculates all scores. Visit a high-priority retailer? Their score drops. Miss someone for too long? Their score goes up. The list stays fresh.
 
 ---
 
-## Architecture
+## How The Smart Scoring Works
 
-### System Overview
+We don't just guess. The system looks at:
 
-```mermaid
-graph TB
-    subgraph Data Sources
-        A[POS Transactions] --> E
-        B[Visit Logs] --> E
-        C[Inventory Data] --> E
-        D[WhatsApp Campaigns] --> E
-    end
+**Sales History**  
+What they bought, when, how much. Rolling 7-day, 30-day, 90-day windows.
 
-    subgraph Backend
-        E[Feature Engineering Pipeline] --> F[ML Scoring Model]
-        F --> G[SHAP Explainer]
-        G --> H[Next Best Action Engine]
-        H --> I[FastAPI Server]
-    end
+**Visit Patterns**  
+When did you last visit? How often do you usually go?
 
-    subgraph Config
-        J[config.yaml] --> H
-        K[ENV Variables] --> I
-    end
+**Stock Levels**  
+Current inventory, how fast they're selling, projected stockout date.
 
-    subgraph Clients
-        I --> L[Mobile App - React Native]
-        I --> M[Web Dashboard]
-        I --> N[Admin / Manager View]
-    end
+**WhatsApp Engagement**  
+Did they open your campaign messages? Click links? Show interest?
+
+**Revenue Trends**  
+Growing fast? Declining? Seasonal patterns?
+
+**Anomaly Detection**  
+Sudden demand spike? Unusual buying pattern? Something worth investigating?
+
+All this gets crunched into one simple score and a clear reason why.
+
+---
+
+## The Complete Workflow
+
+### Morning Routine
+1. **Rep opens mobile app** → Gets today's prioritized list
+2. **Sees clear actions** → "Visit Sharma Agro first - stockout risk"
+3. **Plans route** → App suggests efficient village-wise clustering
+
+### During Visits
+4. **Visits retailer** → Discusses the specific issues flagged by the system
+5. **Logs visit** → Records what happened, what was sold, next steps
+6. **System updates** → Scores automatically recalculate based on new data
+
+### Behind The Scenes
+7. **Rescoring pipeline** → When you run `rescore.py`, it updates the database
+8. **Fresh recommendations** → Next day's list reflects yesterday's visits
+9. **Manager visibility** → All visit data flows to dashboards
+
+This creates a feedback loop: better data → better recommendations → better results → better data.
+
+---
+
+## Tech Stack (The Simple Version)
+
+**Smart Scoring:** Python + XGBoost (learns from patterns)  
+**Mobile App:** React Native (works on Android & iOS)  
+**API:** FastAPI (connects everything)  
+**Database:** PostgreSQL (stores all the data)  
+**Notebooks:** Jupyter (for experimenting and analysis)  
+**Deployment:** Docker (easy setup anywhere)
+
+---
+
+## Quick Start
+
+### Option 1: Docker (Easiest)
+```bash
+git clone https://github.com/smritis21/KisaanSakhi.git
+cd KisaanSakhi
+git checkout smriti
+
+cp .env.example .env
+# Edit .env with your database details
+
+cd docker
+docker-compose up --build
 ```
 
-### ML Data Flow
+Visit `http://localhost:8000/docs` to see the API in action!
 
-```mermaid
-flowchart LR
-    A[Raw Data] --> B[Feature Engineering]
-    B --> C{ML Model}
-    C --> D[Opportunity Score 0–1]
-    D --> E[SHAP Explainer]
-    E --> F[Top 3 Reasons]
-    D --> G[Action Rule Engine]
-    G --> H[Ranked Visit List]
-    F --> H
-    H --> I[API Response]
+### Option 2: Manual Setup
+```bash
+git clone https://github.com/smritis21/KisaanSakhi.git
+cd KisaanSakhi
+git checkout smriti
+
+python -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
+
+pip install -r requirements.txt
+cp .env.example .env
+
+# Run the data pipeline
+python pipeline/feature_engineering.py
+python ml/inference_pipeline.py
+
+# Start the API
+uvicorn api.main:app --reload --port 8000
 ```
 
-### User Workflow
-
-```mermaid
-sequenceDiagram
-    participant Rep as Sales Rep
-    participant App as Mobile App
-    participant API as FastAPI Backend
-    participant ML as ML Pipeline
-
-    Rep->>App: Opens app in the morning
-    App->>API: GET /api/v1/retailers
-    API->>ML: Run inference pipeline
-    ML-->>API: Scored + ranked retailer list
-    API-->>App: Returns prioritized list with actions
-    App-->>Rep: Shows "Visit Sharma Agro first — stockout risk"
-    Rep->>App: Logs visit after meeting
-    App->>API: POST /api/v1/sync (when online)
+### Mobile App
+```bash
+cd mobile
+npm install
+npx expo start
 ```
 
 ---
 
-## Tech Stack
+## API Examples
 
-| Category | Technology | Purpose |
-|----------|-----------|---------|
-| ML / AI | Python, XGBoost, SHAP, Pandas, NumPy | Scoring model, feature engineering, explainability |
-| Notebooks | Jupyter | EDA, model experiments, validation |
-| Backend API | FastAPI, Python 3.9+ | REST API, config management, sync |
-| Mobile App | React Native, TypeScript | Field rep interface, offline support |
-| Config | YAML, python-dotenv | Dynamic configuration, env var management |
-| Infrastructure | Docker, docker-compose | Containerized local + production setup |
-| Data Storage | PostgreSQL (configurable) | Retailer data, visit logs, scores |
-| Testing | pytest, pytest-cov | Unit + integration tests |
+### Get Today's Priority List
+```bash
+curl -H "Authorization: Bearer agripulse-hackathon-secret-key-2026" \
+  "http://localhost:8000/api/v1/reps/REP_0016/priority-list?limit=5"
+```
+
+### Log a Visit
+```bash
+curl -X POST -H "Authorization: Bearer agripulse-hackathon-secret-key-2026" \
+  -H "Content-Type: application/json" \
+  "http://localhost:8000/api/v1/sync/visit" \
+  -d '{"retailer_id": "RET_0042", "notes": "Restocked seeds, discussed new campaign"}'
+```
+
+### Update Scores After Visits
+```bash
+python rescore.py
+```
+This recalculates all opportunity scores based on new visit data and updates the database.
+
+---
+
+## The Rescoring Pipeline
+
+Here's how the system stays fresh:
+
+1. **Rep logs visit** → Mobile app records visit details
+2. **Data syncs** → Visit info goes to database  
+3. **Manual rescore** → Run `rescore.py` to update all scores
+4. **Fresh recommendations** → Next API call returns updated priority list
+
+**Why manual for now?** We wanted to keep it simple for the hackathon. In production, this would run automatically after each visit or on a schedule.
+
+---
+
+## Current Limitations & Future Plans
+
+### What Works Now
+- ✅ Single rep view (REP_0016)
+- ✅ Basic visit logging
+- ✅ Manual rescoring pipeline
+- ✅ Offline mobile app
+- ✅ Live API and web dashboard
+
+### Coming Soon
+- **Role-Based Access Control (RBAC)** - Different views for reps, managers, admins
+- **Multi-rep support** - Handle hundreds of reps across territories  
+- **Automatic rescoring** - Real-time updates after each visit
+- **Manager dashboard** - Territory-wide analytics and performance tracking
+- **Multi-language** - Hindi, Marathi, Telugu, Kannada support
+- **Voice logging** - "Hey AgriPulse, log visit to Sharma Agro"
+- **Photo capture** - Snap shelf photos, POS materials during visits
+- **WhatsApp integration** - Send messages directly from the app
 
 ---
 
@@ -247,518 +294,52 @@ sequenceDiagram
 
 ```
 KisaanSakhi/
-│
-├── api/                        # FastAPI application
-│   ├── main.py                 # App entry point, router registration
-│   ├── routers/
-│   │   ├── reps.py             # Rep priority lists and routes
-│   │   ├── retailers.py        # Retailer scoring + action endpoints
-│   │   ├── sync.py             # Mobile sync endpoints
-│   │   ├── health.py           # Health check endpoints
-│   │   └── config.py           # Runtime config management endpoints
-│   └── core/
-│       └── models.py           # Model loading and management
-│
-├── config/                     # Configuration layer
-│   └── config.yaml             # Central configuration file
-│
-├── ml/                         # Machine learning core
-│   ├── train_xgboost.py        # Opportunity scorer training
-│   ├── anomaly_detection.py    # Isolation Forest for demand spikes
-│   ├── explain.py              # SHAP explanation generation
-│   ├── next_best_action.py     # Action rule engine
-│   ├── route_optimizer.py      # Tehsil-clustered routing
-│   └── inference_pipeline.py   # Daily scoring orchestrator
-│
-├── pipeline/                   # Data processing
-│   ├── ingest.py               # Data ingestion from CSV
-│   ├── feature_engineering.py  # Feature computation pipeline
-│   └── label_engineering.py    # Label generation for training
-│
-├── mobile/                     # React Native mobile app
-│   └── src/
-│       ├── screens/
-│       │   ├── DashboardScreen.js
-│       │   ├── RetailerCardScreen.js
-│       │   └── RouteViewScreen.js
-│       └── services/
-│           ├── configService.js    # Dynamic config from API
-│           └── syncService.js      # Offline sync logic
-│
-├── models/                     # Saved ML model artifacts (.pkl)
-├── notebooks/                  # Jupyter notebooks for EDA and experiments
-├── screenshots/                # App screenshots for documentation
-├── tests/                      # Test suite
-├── docker/                     # Docker configuration
-│   └── docker-compose.yml
-│
-├── .env.example                # Environment variable template
-├── requirements.txt            # Python dependencies
-└── README.md
+├── api/                    # FastAPI backend
+├── mobile/                 # React Native app  
+├── ml/                     # Smart scoring models
+├── pipeline/               # Data processing
+├── notebooks/              # Analysis & experiments
+├── screenshots/            # App screenshots
+├── config/                 # Settings & thresholds
+├── rescore.py             # Manual rescoring script
+└── README.md              # You are here!
 ```
-
----
-
-## Installation
-
-### Prerequisites
-
-Before you begin, make sure you have:
-
-- **Python 3.9+** — [Download](https://python.org/downloads)
-- **Node.js 18+** — [Download](https://nodejs.org) (for the mobile app)
-- **Docker** — [Download](https://docker.com/get-started) (optional but recommended)
-- **Git**
-
----
-
-### Option A — Docker (Recommended)
-
-The fastest way to get everything running.
-
-```bash
-# 1. Clone the repo
-git clone https://github.com/smritis21/KisaanSakhi.git
-cd KisaanSakhi
-git checkout smriti
-
-# 2. Copy and configure environment variables
-cp .env.example .env
-# Edit .env with your values
-
-# 3. Start all services
-cd docker
-docker-compose up --build
-```
-
-The API will be available at `http://localhost:8000`.
-Swagger docs at `http://localhost:8000/docs`.
-
----
-
-### Option B — Local Python Setup
-
-```bash
-# 1. Clone the repo
-git clone https://github.com/smritis21/KisaanSakhi.git
-cd KisaanSakhi
-git checkout smriti
-
-# 2. Create and activate virtual environment
-python -m venv venv
-source venv/bin/activate        # macOS / Linux
-# venv\Scripts\activate         # Windows
-
-# 3. Install dependencies
-pip install -r requirements.txt
-
-# 4. Configure environment variables
-cp .env.example .env
-# Edit .env with your values
-
-# 5. Run data pipeline
-python pipeline/ingest.py
-python pipeline/feature_engineering.py
-python pipeline/label_engineering.py
-
-# 6. Train models
-python ml/train_xgboost.py
-python ml/anomaly_detection.py
-python ml/explain.py
-
-# 7. Score retailers
-python ml/inference_pipeline.py
-
-# 8. Start the API server
-uvicorn api.main:app --reload --port 8000
-```
-
----
-
-### Troubleshooting
-
-| Issue | Fix |
-|-------|-----|
-| `ModuleNotFoundError` | Make sure your virtual environment is activated |
-| Port 8000 already in use | Change port with `--port 8001` |
-| Docker build fails | Run `docker-compose down -v` then rebuild |
-| Database connection error | Double-check `DATABASE_URL` in `.env` |
-
----
-
-## Environment Variables
-
-Copy `.env.example` to `.env` and fill in the values:
-
-```env
-# Database
-DATABASE_URL=postgresql://user:password@localhost:5432/agripulse
-
-# API
-API_AUTH_TOKEN=agripulse-hackathon-secret-key-2026
-API_HOST=0.0.0.0
-API_PORT=8000
-
-# Mobile
-DEFAULT_REP_ID=REP_0016
-
-# ML
-MODEL_PATH=models/
-
-# Logging
-LOG_LEVEL=INFO
-```
-
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `DATABASE_URL` | Yes | PostgreSQL connection string |
-| `API_AUTH_TOKEN` | Yes | Bearer token for API authentication |
-| `DEFAULT_REP_ID` | No | Default rep ID for the mobile app |
-| `MODEL_PATH` | No | Path to trained model artifacts |
-| `LOG_LEVEL` | No | `DEBUG`, `INFO`, `WARNING`, or `ERROR` |
-
-> Never commit your `.env` file. It is already in `.gitignore`.
-
----
-
-## Usage Guide
-
-### 1. Start the Backend
-
-```bash
-uvicorn api.main:app --reload --port 8000
-```
-
-### 2. Get Rep's Priority List
-
-```bash
-curl -H "Authorization: Bearer agripulse-hackathon-secret-key-2026" \
-  "http://localhost:8000/api/v1/reps/REP_0016/priority-list?limit=5"
-```
-
-### 3. Get Route Suggestion
-
-```bash
-curl -X POST -H "Authorization: Bearer agripulse-hackathon-secret-key-2026" \
-  "http://localhost:8000/api/v1/reps/REP_0016/route-suggestion"
-```
-
-### 4. Start the Mobile App
-
-```bash
-cd mobile
-npm install
-npx expo start
-```
-
-### 5. Run the ML Scoring Pipeline Manually
-
-```bash
-python ml/inference_pipeline.py
-```
-
-This regenerates scores and refreshes the API's data.
-
-### 6. Explore the Notebooks
-
-```bash
-jupyter notebook notebooks/
-```
-
----
-
-## API Documentation
-
-Full interactive docs are available at `http://localhost:8000/docs` (Swagger UI) and `http://localhost:8000/redoc` (ReDoc).
-
-### Core Endpoints
-
-| Endpoint | Method | Auth | Description |
-|----------|--------|------|-------------|
-| `/api/v1/reps/{rep_id}/priority-list` | GET | Bearer | Ranked list of retailers with scores and actions |
-| `/api/v1/reps/{rep_id}/route-suggestion` | POST | Bearer | Tehsil-clustered route optimization |
-| `/api/v1/retailers/{id}/opportunity` | GET | Bearer | Single retailer score + SHAP explanation |
-| `/api/v1/sync/visit` | POST | Bearer | Sync visit logs from mobile app |
-| `/api/v1/health` | GET | None | Health check |
-| `/api/v1/config` | GET | Bearer | View current runtime configuration |
-
-### Example: Get Priority List
-
-**Request**
-```bash
-GET /api/v1/reps/REP_0016/priority-list?limit=5&score_date=2026-05-19
-Authorization: Bearer agripulse-hackathon-secret-key-2026
-```
-
-**Response**
-```json
-{
-  "rep_id": "REP_0016",
-  "score_date": "2026-05-19",
-  "retailers": [
-    {
-      "retailer_id": "RET_0042",
-      "tehsil": "Karnal",
-      "opportunity_score": 0.847,
-      "action_code": "URGENT_RESTOCK",
-      "action_label": "Urgent: Restock Tilt 250 EC - stockout in 14 days or less",
-      "top_reason_text": "Tilt 250 EC stock level: 8.0 (decreases score)",
-      "days_to_stockout": 9.3,
-      "priority": 1
-    }
-  ]
-}
-```
-
-### HTTP Status Codes
-
-| Code | Meaning |
-|------|---------|
-| 200 | Success |
-| 400 | Bad request — check your payload |
-| 401 | Unauthorized — invalid or missing token |
-| 404 | Rep or retailer not found |
-| 500 | Server error — check logs |
-
----
-
-## Machine Learning Pipeline
-
-### How It Works
-
-The ML system solves a ranking problem: given all the retailers a sales rep is responsible for, which ones should they visit *today*, ordered by impact?
-
-### Data Sources
-
-| Source | What It Contains |
-|--------|-----------------|
-| POS Transactions | What was sold, when, how much |
-| Visit Logs | When each retailer was last visited, by whom |
-| Inventory Records | Current stock levels, historical trends |
-| WhatsApp Campaigns | Message open/engagement data |
-
-### XGBoost Opportunity Scorer
-
-- 500 estimators, max_depth=4, lr=0.05
-- 70/15/15 stratified split, early stopping on val AUC (30 rounds)
-- Class imbalance handled via `scale_pos_weight`
-- Target: AUC ≥ 0.72
-
-### Isolation Forest Anomaly Detector
-
-- 200 estimators, contamination=0.05
-- Flags ~5% of retailers with unusual POS/inventory patterns
-- Catches sudden demand spikes the XGBoost model won't see
-
-### SHAP Explanations
-
-- `shap.TreeExplainer` runs on every retailer
-- Top 3 features by absolute SHAP value → plain English reason shown in the app
-
-### Next Best Action Engine
-
-| Priority | Condition | Action |
-|---|---|---|
-| 1 | stockout_flag=1 AND score > 0.7 | URGENT_RESTOCK |
-| 1 | days_since_last_visit > 21 AND score > 0.7 | OVERDUE_HIGH |
-| 2 | anomaly_flag=1 AND mom_growth > 0.3 | INVESTIGATE_SPIKE |
-| 2 | days_since_last_visit > 14 AND score > 0.6 | OVERDUE_VISIT |
-| 3 | score > 0.6 | STANDARD_VISIT |
-| 4 | fallback | LOW_PRIORITY |
-
----
-
-## Mobile App
-
-The mobile app is built in React Native + TypeScript for cross-platform deployment (iOS and Android from a single codebase).
-
-### Key Screens
-
-- **Dashboard** — Prioritized retailer list for today's visits, sorted by score
-- **Retailer Detail** — Score, action type, SHAP reasons, contact info, last visit date
-- **Visit Logger** — Log a visit with notes, outcome, and next follow-up date
-- **Route View** — Tehsil-clustered route ordered by cluster score
-- **Visit History** — All visits today including offline-queued ones
-
-### Offline Support
-
-The app uses SQLite for local storage. Reps in areas with no connectivity can still see their prioritized list and log visits. Everything syncs automatically the next time a connection is available.
-
-### Running the App
-
-```bash
-cd mobile
-npm install
-npx expo start
-```
-
----
-
-## Configuration
-
-Everything lives in `config/config.yaml`. Change thresholds without touching code:
-
-```yaml
-action_rules:
-  stockout:
-    threshold_days: 14
-    min_score: 0.7
-  overdue_high:
-    threshold_days: 21
-    min_score: 0.7
-
-shap:
-  top_n_features: 3
-```
-
-Or update live via API:
-```bash
-curl -X POST http://localhost:8000/api/v1/config \
-  -H "Content-Type: application/json" \
-  -d '{"key": "action_rules.stockout.threshold_days", "value": 7}'
-```
-
----
-
-## Performance & Scalability
-
-**Inference on demand vs. scheduled batch.** The current architecture runs the ML pipeline as a batch job and serves cached scores via the API. This makes the API response instant even with thousands of retailers.
-
-**Feature caching.** Feature engineering is the most compute-intensive step. Features are computed once per batch cycle and stored. The scoring model reads from this cache, keeping inference fast.
-
-**Async API.** FastAPI is built on Starlette's async foundation, meaning it handles concurrent mobile app syncs without blocking.
-
-**Offline-first mobile.** By caching the prioritized list on-device, the mobile app generates zero API traffic during a normal working day in the field.
-
----
-
-## Security
-
-**Authentication.** All API endpoints require a Bearer token. Tokens are configured via the `API_AUTH_TOKEN` environment variable.
-
-**Secret management.** No secrets are hardcoded anywhere in the codebase. All sensitive values are injected via environment variables.
-
-**Input validation.** FastAPI uses Pydantic models for all request payloads. Invalid inputs are rejected at the serialization layer.
-
-**HTTPS.** For production deployment, always terminate HTTPS at the load balancer or reverse proxy layer.
-
----
-
-## Roadmap
-
-**Completed**
-
-- [x] ML scoring pipeline with XGBoost and Isolation Forest
-- [x] SHAP-based explainability
-- [x] Next Best Action engine with dynamic rules
-- [x] FastAPI backend with full REST API
-- [x] Offline-first React Native mobile app
-- [x] Dynamic YAML configuration with runtime API
-- [x] Route optimization with tehsil clustering
-- [x] Docker containerization
-
-**Planned**
-
-- [ ] Manager dashboard with territory-level analytics
-- [ ] Real-time scoring (trigger inference on demand per rep)
-- [ ] Multi-language support (Hindi, Marathi, Telugu, Kannada)
-- [ ] Voice input for visit logging
-- [ ] Photo capture during visits
 
 ---
 
 ## Contributing
 
-Contributions are welcome. The goal is to keep AgriPulse useful for real teams in the field.
+Want to make AgriPulse better? Here's how:
 
-### Getting Started
+1. **Fork the repo** on GitHub
+2. **Create a branch** for your feature
+3. **Make your changes** (keep it simple!)
+4. **Test everything** with `pytest tests/`
+5. **Submit a pull request**
 
-```bash
-# Fork the repo, then clone your fork
-git clone https://github.com/your-username/KisaanSakhi.git
-cd KisaanSakhi
-git checkout smriti
-
-# Create a feature branch
-git checkout -b feature/your-feature-name
-```
-
-### Pull Request Process
-
-1. Make sure all existing tests pass: `pytest tests/`
-2. Add tests for any new behavior
-3. Update documentation if you changed any API contract
-4. Keep PRs focused — one feature or fix per PR
+We especially welcome:
+- Multi-language support
+- Mobile app improvements  
+- Better scoring algorithms
+- UI/UX enhancements
 
 ---
 
-## Testing
+## License & Credits
 
-```bash
-# Run the full test suite
-pytest tests/
+**MIT License** - Use it, modify it, build on it!
 
-# Run with coverage report
-pytest tests/ --cov=. --cov-report=html
+Built for the **Syngenta × IIT Madras Hackathon 2026** by Team KisaanSakhi.
 
-# Run a specific test file
-pytest tests/test_model_reload.py
-```
-
----
-
-## Deployment
-
-### Docker (Production)
-
-```bash
-cd docker
-docker-compose up --build -d
-```
-
-### Manual Production Deployment
-
-```bash
-# Install production dependencies
-pip install -r requirements.txt
-
-# Start with a production ASGI server
-gunicorn api.main:app -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000
-```
-
----
-
-## Recommended Hosting
-
-| Component | Recommended Platform | Why |
-|-----------|---------------------|-----|
-| Backend API | [Railway](https://railway.app) | Simple FastAPI deployment, PostgreSQL add-on |
-| Database | [Railway PostgreSQL](https://railway.app) | Managed PostgreSQL with the API |
-| Mobile App | [Expo Application Services](https://expo.dev/eas) | Build + distribute React Native apps |
-| Object Storage | [Cloudflare R2](https://cloudflare.com/developer-platform/r2) | Store model artifacts cheaply |
-
----
-
-## License
-
-This project is licensed under the **MIT License**.  
-See the [LICENSE](LICENSE) file for details.
-
----
-
-## Acknowledgements
-
-Built for the **Syngenta × IIT Madras Hackathon 2026** - Track 2: AI-Guided Field Force Intelligence.
-
-The SHAP library by [Lundberg & Lee (2017)](https://arxiv.org/abs/1705.07874) is central to the explainability layer. Their work on making model decisions interpretable has real-world impact beyond just AI research.
+Special thanks to the SHAP library for making our recommendations explainable, and to all the field reps who inspired this solution.
 
 ---
 
 <div align="center">
 
-**AgriPulse** &nbsp;·&nbsp; MIT License &nbsp;·&nbsp; Built for Indian Agriculture
+**AgriPulse** - Making field sales smarter, one visit at a time.
 
-*If this project was useful to you, consider leaving a star — it helps others find it.*
+*Built with love for Indian agriculture*
 
 [![Star on GitHub](https://img.shields.io/github/stars/smritis21/KisaanSakhi?style=social)](https://github.com/smritis21/KisaanSakhi)
 
